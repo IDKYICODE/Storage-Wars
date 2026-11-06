@@ -2,7 +2,6 @@
 // and returns an HTML string. No DOM access, so it is tested in Node.
 import { esc, formatMoney } from '../art/kit.js';
 import { renderFlipCard, renderUnitCard } from './card.js';
-import { renderPayment } from '../screens/payment.js';
 
 const nameOf = (view, id) => esc(view.players.find((p) => p.id === id)?.name ?? '?');
 
@@ -22,10 +21,8 @@ export function headline(view) {
       return 'Peek window: bidders may look at one crate';
     case 'bidding':
       return view.bid ? `${nameOf(view, view.bid.bidderId)} leads at ${formatMoney(view.bid.amount)}` : 'Bidding is open: opening bid $100';
-    case 'payment':
-      return `${nameOf(view, view.winner.playerId)} is paying ${formatMoney(view.winner.price)}`;
     case 'reveal':
-      return view.voided ? 'VOID! A Havoc card wiped the unit' : `${nameOf(view, view.winner.playerId)} opens the unit`;
+      return view.voided ? 'VOID! A Havoc card wiped the unit' : `${nameOf(view, view.winner.playerId)} paid ${formatMoney(view.winner.price)} and opens the unit`;
     default:
       return '';
   }
@@ -89,10 +86,8 @@ export function parseAmount(raw) {
   return n >= 100 && n % 100 === 0 && Number.isSafeInteger(n) ? n : null;
 }
 
-const myAssets = (view) => {
-  const me = view.players.find((p) => p.id === view.you);
-  return me.cash + view.myItems.reduce((n, it) => n + Math.max(0, it.value), 0);
-};
+/** You can only bid cash you hold. */
+const myCash = (view) => view.players.find((p) => p.id === view.you).cash;
 
 const CALL_LABEL = ['GOING ONCE', 'GOING TWICE', 'SOLD!'];
 
@@ -111,25 +106,25 @@ function renderBidControls(view, ui) {
   const { can } = view;
   const parts = [];
   const high = view.bid?.amount ?? 0;
-  const assets = myAssets(view);
+  const cash = myCash(view);
   if (can.bid) {
-    // you can only bid what you can pay (cash plus the value of your items), so bigger steps are switched off
+    // you can only bid cash you hold, so bigger steps are switched off
     const quick = [100, 500, 1000].map((add) => {
       const amount = high + add;
-      return `<button class="btn" data-act="bid" data-amount="${amount}"${amount > assets ? ' disabled' : ''}>+${formatMoney(add)}</button>`;
+      return `<button class="btn" data-act="bid" data-amount="${amount}"${amount > cash ? ' disabled' : ''}>+${formatMoney(add)}</button>`;
     }).join('');
     const custom = parseAmount(ui.custom);
-    const ok = custom !== null && custom > high && custom <= assets;
-    const tooMuch = custom !== null && custom > assets;
+    const ok = custom !== null && custom > high && custom <= cash;
+    const tooMuch = custom !== null && custom > cash;
     parts.push(`<div class="quick">${quick}</div>`
       + `<div class="custom"><input id="custom" inputmode="numeric" placeholder="Custom amount" aria-label="Custom bid" value="${esc(ui.custom ?? '')}">`
       + `<button class="btn small go" data-act="bidcustom"${ok ? '' : ' disabled'}>BID</button></div>`
-      + `<p class="hint">You can bid up to ${formatMoney(assets)}</p>`
-      + `${tooMuch ? `<p class="risk">That is more than you can pay. The most you can bid is ${formatMoney(assets)}.</p>` : ''}`);
+      + `<p class="hint">You can bid up to your cash: ${formatMoney(cash)}</p>`
+      + `${tooMuch ? `<p class="risk">That is more than the cash you have. The most you can bid is ${formatMoney(cash)}.</p>` : ''}`);
   } else if (view.bid?.bidderId === view.you) {
     parts.push("<p class=\"youwin\">You're winning</p>");
   } else if (view.players.find((p) => p.id === view.you)?.buyIn === 'in') {
-    parts.push(`<p class="hint">You cannot afford to outbid ${formatMoney(high)}. You can bid up to ${formatMoney(assets)}.</p>`);
+    parts.push(`<p class="hint">You do not have the cash to outbid ${formatMoney(high)}. You have ${formatMoney(cash)}.</p>`);
   } else {
     parts.push('<p class="hint">You are watching this auction.</p>');
   }
@@ -143,7 +138,6 @@ export function renderActions(view, ui = {}) {
     return '<div class="actions"><p class="hint">You were eliminated. You can keep watching.</p></div>';
   }
   if (view.phase === 'bidding') parts.push(renderBidControls(view, ui));
-  if (view.phase === 'payment') parts.push(renderPayment(view, ui));
   if (can.peek) parts.push(`<button class="btn${ui.pick === 'peek' ? ' on' : ''}" data-pick="peek">PEEK AT A CRATE</button>`);
   if (can.pass) {
     parts.push(`<button class="btn go" data-act="buyin"${can.buyin ? '' : ' disabled'}>Buy in ${formatMoney(view.config.buyIn)}</button>`);

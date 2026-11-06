@@ -58,7 +58,7 @@ export function createGame(players, seed, now = 0, config = {}) {
 /**
  * Long games outlast the 56 cards: when the item deck cannot cover a unit, a fresh shuffled set is added underneath
  * what is left. A card already in someone's hand or in the deck comes back as a copy with a new id (`base` keeps its art),
- * so ids stay unique and payment by id keeps working.
+ * so ids stay unique.
  */
 function refillItems(state, needed) {
   if (state.itemDeck.length >= needed) return;
@@ -93,7 +93,7 @@ export function startRound(state, now) {
 
 export const TIMERS = {
   autoFlip: 2000, buyIn: 25000, peekWindow: 15000,
-  opening: 10000, callStage: 3000, payment: 60000, reveal: 4000,
+  opening: 10000, callStage: 3000, reveal: 4000,
 };
 
 /** First phase of a freshly drawn unit: flip (if the unit allows it) or buy-in, with its deadline. */
@@ -125,9 +125,6 @@ export function openBuyIn(state, now) {
   state.phase = 'buyin';
   state.deadline = { kind: 'buyin', at: now + TIMERS.buyIn };
 }
-
-/** What a player can pay with: cash plus the face value of items worth more than nothing (junk never counts). */
-export const assets = (player) => player.cash + player.items.reduce((n, it) => n + Math.max(0, it.value), 0);
 
 /** advance() plus the events the table animates. */
 export function endRound(state, now, events) {

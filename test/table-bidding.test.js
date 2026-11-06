@@ -56,18 +56,18 @@ test('there is no call button for anyone; everyone sees the automatic call banne
   assert.ok(html(bidding({ bid: { amount: 300, bidderId: 'p1' }, call: 2 }), 'p3').includes('GOING TWICE…'));
 });
 
-test('a custom bid above what you can pay is blocked with a clear message', () => {
+test('a custom bid above your cash is blocked with a clear message', () => {
   const s = bidding({ bid: { amount: 300, bidderId: 'p1' } });
   const over = html(s, 'p2', { custom: '9000' });
-  assert.ok(over.includes('more than you can pay'));
+  assert.ok(over.includes('more than the cash you have'));
   assert.ok(over.includes('$5,000'));
   assert.match(over, /data-act="bidcustom"[^>]*disabled/);
   const fine = html(s, 'p2', { custom: '600' });
-  assert.ok(!fine.includes('more than you can pay'));
+  assert.ok(!fine.includes('more than the cash you have'));
   assert.doesNotMatch(fine, /data-act="bidcustom"[^>]*disabled/);
 });
 
-test('quick-bid buttons that would exceed your assets are switched off', () => {
+test('quick-bid buttons that would exceed your cash are switched off', () => {
   const s = bidding({ bid: { amount: 4800, bidderId: 'p1' } }); // +1000 = 5800 > $5,000
   const h = html(s, 'p2');
   assert.match(h, /data-amount="5800"[^>]*disabled/);

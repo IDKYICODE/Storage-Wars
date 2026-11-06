@@ -21,7 +21,6 @@ function play(socket) {
       bids[view.roundNo] = (bids[view.roundNo] ?? 0) + 1;
       setTimeout(() => act('bid', { amount: (view.bid?.amount ?? 0) + 100 * (1 + Math.floor(Math.random() * 4)) }), 900 + Math.random() * 1500);
     }
-    if (can.pay && view.payment.suggested) setTimeout(() => act('pay', view.payment.suggested), 1500);
   });
 }
 

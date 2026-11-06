@@ -1,5 +1,6 @@
 import { ActionError, registerHandler, registerTimeout } from './registry.js';
-import { TIMERS, assets, buyInOrder, endRound } from './state.js';
+import { TIMERS, buyInOrder, endRound } from './state.js';
+import { settleSale } from './payment.js';
 
 const need = (ok, code, msg) => { if (!ok) throw new ActionError(code, msg); };
 
@@ -24,7 +25,7 @@ function rearm(state, now) {
  * Returns false (and ends the round) when nobody can.
  */
 function autoOpen(state, now, events) {
-  const first = bidders(state).find((id) => assets(state.players[id]) >= 100);
+  const first = bidders(state).find((id) => state.players[id].cash >= 100);
   if (!first) {
     events.push({ type: 'discarded' });
     endRound(state, now, events);
@@ -38,21 +39,18 @@ function autoOpen(state, now, events) {
 
 function sold(state, now, events) {
   state.winner = { playerId: state.bid.bidderId, price: state.bid.amount };
-  state.phase = 'payment';
-  // a winner who cannot possibly pay is failed on the next tick instead of waiting out the clock
-  const unaffordable = assets(state.players[state.winner.playerId]) < state.winner.price;
-  state.deadline = { kind: 'payment', at: now + (unaffordable ? 0 : TIMERS.payment) };
   events.push({ type: 'sold', playerId: state.winner.playerId, price: state.winner.price });
+  settleSale(state, now, events); // the winner pays in cash on the spot and the unit is opened
 }
 
 registerHandler('bid', (state, action, now, events) => {
-  need(state.phase !== 'payment' && state.phase !== 'reveal', 'too-late', 'the auction is over');
+  need(state.phase !== 'reveal', 'too-late', 'the auction is over');
   need(state.phase === 'bidding', 'wrong-phase');
   need(bidders(state).includes(action.by), 'not-allowed', 'you are not in this auction');
   need(state.bid?.bidderId !== action.by, 'not-allowed', 'you already lead');
   const a = action.amount;
   need(Number.isInteger(a) && a >= 100 && a % 100 === 0 && a > (state.bid?.amount ?? 0), 'invalid', 'bad amount');
-  need(a <= assets(state.players[action.by]), 'invalid', 'more than you can pay');
+  need(a <= state.players[action.by].cash, 'invalid', 'more than the cash you have');
   state.bid = { amount: a, bidderId: action.by };
   state.call = 0;
   events.push({ type: 'bid', by: action.by, amount: a });

@@ -1,5 +1,4 @@
 import { renderTable, renderActions, parseAmount } from '../ui/table-view.js';
-import { defaultSelection } from './payment.js';
 import { feedbackFor } from '../ui/feedback.js';
 
 export { renderTable };
@@ -88,8 +87,6 @@ export function mount(root, ctx) {
   const paint = (events = []) => {
     if (!view) return;
     if (ui.pick && !view.can.peek) ui.pick = null;
-    if (!view.can.pay) ui.pay = null;
-    else if (!ui.pay) ui.pay = defaultSelection(view); // start from the server's suggestion
     root.innerHTML = renderTable(view, ui);
     busy = false;
     applyScale();
@@ -121,17 +118,9 @@ export function mount(root, ctx) {
       send(type, { index });
       return;
     }
-    const chip = e.target.closest('.pchip');
-    if (chip && ui.pay) {
-      const id = chip.dataset.item;
-      ui.pay.ids = ui.pay.ids.includes(id) ? ui.pay.ids.filter((x) => x !== id) : [...ui.pay.ids, id];
-      refreshActions('');
-      return;
-    }
     const btn = e.target.closest('[data-act]');
     const act = btn?.dataset.act;
-    if (act === 'pay' && ui.pay) send('pay', { cash: ui.pay.cash, itemIds: ui.pay.ids });
-    else if (act === 'buyin' || act === 'pass' || act === 'ready') send(act);
+    if (act === 'buyin' || act === 'pass' || act === 'ready') send(act);
     else if (act === 'bid') send('bid', { amount: Number(btn.dataset.amount) });
     else if (act === 'bidcustom') bidCustom();
   };
@@ -157,11 +146,6 @@ export function mount(root, ctx) {
     if (e.target.id === 'custom') {
       ui.custom = e.target.value;
       refreshActions('custom');
-    } else if (e.target.id === 'paycash' && ui.pay) {
-      const n = Number(e.target.value);
-      const mine = view.players.find((p) => p.id === view.you).cash;
-      ui.pay.cash = Number.isInteger(n) ? Math.min(Math.max(n, 0), mine) : 0;
-      refreshActions('paycash');
     }
   };
   const onKey = (e) => { if (e.key === 'Enter' && e.target.id === 'custom') bidCustom(); };

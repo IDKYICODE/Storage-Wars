@@ -12,8 +12,8 @@ Everyone starts with the same cash ($5,000 by default). The game has an **automa
 
 - **Buy in** (by default $100, paid to the bank) to join the auction, or pass. Everyone decides at the same time.
 - **Peek** at a crate, or watch the Auctioneer flip one, depending on how big the unit is. Peeks are private: only you see what you peeked at.
-- **Bid** in steps of $100, up to what you can pay (cash plus the value of your items). When the bidding stops, the Auctioneer calls "going once, going twice, SOLD!" by itself.
-- The winner **pays the bank** with cash or items they already won, and opens the unit. Junk costs you money, valuables pay off, and a **Havoc** card wipes out the whole unit, so you paid for nothing.
+- **Bid** in steps of $100, never more than the cash you hold. When the bidding stops, the Auctioneer calls "going once, going twice, SOLD!" by itself.
+- The winner **pays the bank in cash** straight away and opens the unit. Items cannot be spent; they only count toward your final score. Junk costs you points, valuables pay off, and a **Havoc** card wipes out the whole unit, so you paid for nothing.
 - After the last round the richest player (cash plus item values) wins.
 
 The host sets the game up in the lobby: the number of rounds (1 to 99; the decks reshuffle when they run out), starting cash ($1,000 to $20,000) and the buy-in fee ($100 to $1,000). A **How to play** booklet with pictures of the real cards and controls is on the entry screen.

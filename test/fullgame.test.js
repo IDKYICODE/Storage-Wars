@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { reduce, tick } from '../server/game/engine.js';
 import { createGame } from '../server/game/state.js';
-import { suggestPayment } from '../server/game/payment.js';
 
 const value = (s) => Object.values(s.players).reduce(
   (n, p) => n + p.cash + p.items.reduce((m, it) => m + it.value, 0), 0);
@@ -37,9 +36,6 @@ function play(seed, n, config = {}) {
       const who = ids[Math.floor(rnd() * ids.length)];
       const reckless = rnd() < 0.08; // tries to bid far beyond what they can pay: the server must refuse it
       if (rnd() < 0.4) apply({ type: 'bid', by: who, amount: (s.bid?.amount ?? 0) + (reckless ? 9000 : 100 * (1 + Math.floor(rnd() * 3))) });
-    } else if (s.phase === 'payment') {
-      const sug = suggestPayment(s.players[s.winner.playerId], s.winner.price);
-      if (sug && rnd() < 0.7) apply({ type: 'pay', by: s.winner.playerId, ...sug });
     }
     now = s.deadline ? Math.max(now + 1, s.deadline.at) : now + 1000;
     const out = tick(s, now);

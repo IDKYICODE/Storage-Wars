@@ -14,16 +14,18 @@ function bidding() {
 const act = (s, type, by, extra = {}, now = 0) => reduce(s, { type, by, ...extra }, now);
 const code = (fn) => { try { fn(); } catch (e) { return e.code; } return null; };
 
-test('nobody can bid more than they can pay: cash plus the value of their items', () => {
+test('nobody can bid more than the cash they hold, whatever items they own', () => {
   const s = bidding();
   s.players.p1.cash = 700;
-  s.players.p1.items = [{ id: 'rug', tier: 'valuable', name: 'Rug', value: 1500, flavor: 'x' }, { id: 'jnk', tier: 'junk', name: 'Junk', value: -400, flavor: 'x' }];
-  // p1 can pay 700 + 1500 = 2200 (junk never counts)
-  assert.equal(code(() => act(s, 'bid', 'p1', { amount: 2300 })), 'invalid');
+  s.players.p1.items = [{ id: 'rug', tier: 'valuable', name: 'Rug', value: 15000, flavor: 'x' }];
+  assert.equal(code(() => act(s, 'bid', 'p1', { amount: 800 })), 'invalid'); // items are not money
   assert.equal(code(() => act(s, 'bid', 'p1', { amount: 1e12 })), 'invalid');
-  assert.equal(code(() => act(s, 'bid', 'p1', { amount: 2200 })), null);
-  // p2 is richer and can still outbid p1's best
-  assert.equal(code(() => act(act(s, 'bid', 'p1', { amount: 2200 }).state, 'bid', 'p2', { amount: 2300 })), null);
+  assert.equal(code(() => act(s, 'bid', 'p1', { amount: 700 })), null);
+  // p2 holds more cash and can outbid p1's best
+  assert.equal(code(() => act(act(s, 'bid', 'p1', { amount: 700 }).state, 'bid', 'p2', { amount: 800 })), null);
+  const broke = bidding();
+  broke.players.p2.cash = 0;
+  assert.equal(code(() => act(broke, 'bid', 'p2', { amount: 100 })), 'invalid');
 });
 
 test('bad bid amounts are rejected', () => {
@@ -49,7 +51,7 @@ test('a bid after SOLD is too late', () => {
   const s = bidding();
   let st = act(s, 'bid', 'p1', { amount: 100 }).state;
   st = tick(tick(tick(st, 3000).state, 6000).state, 9000).state;
-  assert.equal(st.phase, 'payment');
+  assert.equal(st.phase, 'reveal');
   assert.equal(code(() => act(st, 'bid', 'p2', { amount: 200 }, 9001)), 'too-late');
 });
 
@@ -68,10 +70,13 @@ test('auto: once at 3s, twice at 6s, SOLD at 9s; a new bid restarts the count', 
   assert.equal(reset.call, 0);
   assert.deepEqual(reset.deadline, { kind: 'call', at: 10000 });
   let end = tick(tick(tick(reset, 10000).state, 13000).state, 16000);
-  assert.equal(end.state.phase, 'payment');
+  assert.equal(end.state.phase, 'reveal'); // paid on the spot, unit opened
   assert.deepEqual(end.state.winner, { playerId: 'p2', price: 200 });
   assert.ok(end.events.some((e) => e.type === 'sold' && e.playerId === 'p2' && e.price === 200));
-  assert.deepEqual(end.state.deadline, { kind: 'payment', at: 16000 + 60000 });
+  assert.ok(end.events.some((e) => e.type === 'paid' && e.by === 'p2' && e.price === 200));
+  assert.equal(end.state.players.p2.cash, 4800);
+  assert.equal(end.state.bank, 200);
+  assert.deepEqual(end.state.deadline, { kind: 'reveal', at: 16000 + 4000 });
 });
 
 test('auto: no opening bid by 10s assigns $100 to the first buyer in seat order for this round', () => {

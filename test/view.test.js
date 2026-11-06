@@ -91,14 +91,18 @@ test('can-flags follow the phase and what the player did', () => {
   assert.equal(can('p2').bid, true);
   assert.equal(can('p3').bid, false);
 
-  s.phase = 'payment';
-  s.winner = { playerId: 'p1', price: 300 };
-  s.players.p1.cash = 5000; // (earlier in this test p1 was made broke)
-  assert.equal(can('p1').pay, true);
-  assert.equal(can('p2').pay, false);
-  assert.equal(viewFor(s, 'p1').payment.price, 300);
-  assert.equal(viewFor(s, 'p2').payment, null);
-  assert.ok(viewFor(s, 'p1').payment.suggested);
+  // bidding is limited to the cash you hold: a player with $250 cannot raise a $200 bid by $100
+  s.bid = { amount: 200, bidderId: 'p1' };
+  s.players.p2.cash = 250;
+  assert.equal(can('p2').bid, false);
+  s.players.p2.cash = 300;
+  assert.equal(can('p2').bid, true);
+  s.players.p2.items = [{ id: 'rug', tier: 'valuable', name: 'Rug', value: 99000 }];
+  s.players.p2.cash = 250;
+  assert.equal(can('p2').bid, false); // items are not money
+
+  const v = viewFor(s, 'p2');
+  assert.ok(!('payment' in v) && !('pay' in v.can));
 });
 
 test('buy-in status: pending for every undecided player', () => {

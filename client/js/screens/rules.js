@@ -3,7 +3,6 @@
 import { ITEMS, UNITS } from '../../../shared/cards.js';
 import { renderFlipCard, renderUnitCard } from '../ui/card.js';
 import { renderBidPanel, renderPlayers } from '../ui/table-view.js';
-import { renderPayment } from './payment.js';
 
 const item = (name) => ITEMS.find((i) => i.name === name);
 const card = (name) => renderFlipCard(item(name), true);
@@ -67,21 +66,16 @@ const PAGES = [
       + `<div class="quick">${pill('', '+$100')}${pill('', '+$500')}${pill('', '+$1,000')}</div></div>`,
     text: [
       'Anyone who bought in can raise at any time, in steps of $100. The highest bid leads.',
-      'You can only bid what you can pay: cash plus the value of your items. The Auctioneer counts going once, going twice, SOLD on its own, and every new bid restarts the count.',
+      'You can only bid cash you actually hold, so you can never bid more than you have. The Auctioneer counts going once, going twice, SOLD on its own, and every new bid restarts the count.',
     ],
   },
   {
-    title: 'PAY AND OPEN',
-    art: () => `<div class="rb-stack">${still(renderPayment(view({
-      phase: 'payment',
-      winner: { playerId: 'me', price: 1300 },
-      can: { pay: true },
-      payment: { price: 1300, suggested: { cash: 1300, itemIds: [] } },
-      myItems: [item('Garden Gnomes')],
-    })))}</div>`,
+    title: 'SOLD AND OPEN',
+    art: () => `<div class="rb-stack">${still(renderBidPanel(view({ phase: 'bidding', bid: { amount: 1300, bidderId: 'me' }, call: 3 })))}`
+      + `<div class="rb-strip">${still(renderPlayers(view({ players: PLAYERS.map((p) => (p.id === 'me' ? { ...p, cash: 2900 } : p)), bid: { amount: 1300, bidderId: 'me' } })))}</div></div>`,
     text: [
-      'The winner pays the bank with cash and any items they own. No change is given, so anything over the price is lost.',
-      'Then the unit is opened and every item inside is yours, good or bad.',
+      'When the Auctioneer says SOLD, the winner pays the price in cash straight to the bank. No change, no loans: you cannot win something you cannot pay for.',
+      'Then the unit is opened and every item inside is yours, good or bad. Items cannot be spent, they only count toward your final score.',
     ],
   },
   {

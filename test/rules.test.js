@@ -26,7 +26,7 @@ test('the pictures are the real game pieces', () => {
   assert.ok(all.includes('Buy in') && all.includes('Pass'));
   assert.ok(all.includes('class="tile"'), 'flip-board bid tiles');
   assert.ok(all.includes('GOING ONCE'));
-  assert.ok(all.includes('class="paypanel"'), 'payment panel');
+  assert.ok(all.includes('SOLD!'), 'sold banner');
   assert.ok(all.includes('class="card havoc"'), 'havoc card');
   assert.ok(all.includes('class="card junk"') && all.includes('class="card unique"'));
   assert.ok(all.includes('class="chip'), 'scoreboard');
@@ -34,7 +34,7 @@ test('the pictures are the real game pieces', () => {
 
 test('the rules in the words match the real rules', () => {
   const all = pages.join(' ');
-  for (const phrase of ['at the same time', 'cash plus', 'steps of $100', 'No change', 'Havoc', 'richest']) {
+  for (const phrase of ['at the same time', 'cash you actually hold', 'steps of $100', 'No change', 'Havoc', 'richest']) {
     assert.ok(all.includes(phrase), phrase);
   }
 });

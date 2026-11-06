@@ -57,7 +57,6 @@ function autoplay(c, bidsPerRound = 2) {
         bids[view.roundNo] = (bids[view.roundNo] ?? 0) + 1;
         act('bid', { amount: (view.bid?.amount ?? 0) + 100 });
       }
-      if (can.pay && view.payment.suggested) act('pay', view.payment.suggested);
     });
   });
 }

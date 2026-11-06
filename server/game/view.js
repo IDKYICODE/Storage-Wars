@@ -1,6 +1,5 @@
 import { undecidedBuyers } from './state.js';
 import { bidders } from './bidding.js';
-import { suggestPayment, assets } from './payment.js';
 
 /**
  * Everything player `me` is allowed to know about the game. The only place state is turned into
@@ -46,10 +45,9 @@ export function viewFor(state, me) {
     ready: alive && state.phase === 'peekwin' && state.buyIns[me] === 'in' && !state.ready.includes(me) && !hasPeeked,
     buyin: alive && myTurnToDecide && mine.cash >= state.config.buyIn,
     pass: alive && myTurnToDecide,
-    // you can bid only while you can pay a higher bid than the current one
+    // you can bid only cash you hold: a higher bid than the current one must fit in your cash
     bid: alive && state.phase === 'bidding' && bidders(state).includes(me) && state.bid?.bidderId !== me
-      && assets(mine) >= (state.bid?.amount ?? 0) + 100,
-    pay: alive && state.phase === 'payment' && winnerId === me,
+      && mine.cash >= (state.bid?.amount ?? 0) + 100,
   };
 
   return {
@@ -66,9 +64,6 @@ export function viewFor(state, me) {
     call: state.call,
     can,
     winner: state.winner,
-    payment: can.pay
-      ? { price: state.winner.price, assets: assets(mine), suggested: suggestPayment(mine, state.winner.price) }
-      : null,
     deadline: state.deadline,
     voided: state.voided,
     gameover: over
