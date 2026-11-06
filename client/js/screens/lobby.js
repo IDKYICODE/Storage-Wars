@@ -1,4 +1,4 @@
-import { esc } from '../art/kit.js';
+import { esc, formatMoney } from '../art/kit.js';
 
 const CROWN = '<svg class="crown" viewBox="0 0 24 24" aria-label="host"><path d="M3 18l-1-11 6 5 4-8 4 8 6-5-1 11z" fill="#ffd23f" stroke="#1d1a2b" stroke-width="2" stroke-linejoin="round"/></svg>';
 
@@ -6,6 +6,32 @@ const MODES = {
   manual: { label: 'MANUAL', text: 'A real player runs each auction: picks the flip, then calls going once, going twice, SOLD.' },
   auto: { label: 'AUTO', text: "The computer runs each auction for whoever's turn it is. They still collect the money." },
 };
+
+const STEPS = { startCash: [1000, 20000, 1000], buyIn: [100, 1000, 100] };
+
+/** The game-rules panel: rounds each as buttons, starting cash and buy-in as - / + steppers. Read-only for non-hosts. */
+function renderSettings(lobby, isHost) {
+  const { turns, startCash, buyIn } = lobby.settings;
+  const cap = lobby.maxTurns;
+  const n = lobby.players.length;
+  const rounds = Array.from({ length: cap }, (_, i) => i + 1).map((t) => (isHost
+    ? `<button class="seg${turns === t ? ' on' : ''}" data-act="set" data-key="turns" data-value="${t}" aria-pressed="${turns === t}">${t}</button>`
+    : `<span class="seg${turns === t ? ' on' : ''}">${t}</span>`)).join('');
+  const stepper = (key, label) => {
+    const [min, max, step] = STEPS[key];
+    const value = lobby.settings[key];
+    const btn = (to, sign, off) => `<button class="step" data-act="set" data-key="${key}" data-value="${to}" aria-label="${sign === '-' ? 'Less' : 'More'} ${label}"${off ? ' disabled' : ''}>${sign}</button>`;
+    return `<div class="setrow"><span class="setlabel">${label}</span>`
+      + (isHost ? btn(value - step, '-', value <= min) : '')
+      + `<b class="setval">${formatMoney(value)}</b>`
+      + (isHost ? btn(value + step, '+', value >= max) : '')
+      + '</div>';
+  };
+  return `<div class="section"><h2 class="display">GAME RULES</h2>`
+    + `<div class="setrow"><span class="setlabel">Turns each</span><div class="segs">${rounds}</div></div>`
+    + `<p class="modetext">${turns * n} rounds in total</p>`
+    + `${stepper('startCash', 'Starting cash')}${stepper('buyIn', 'Buy-in fee')}</div>`;
+}
 
 /** Pure markup for the room lobby. `lobby` is the server's lobby message ({code, hostId, mode, players, you}). */
 export function renderLobby(lobby) {
@@ -32,6 +58,7 @@ export function renderLobby(lobby) {
     + `<div class="section"><h2 class="display">PLAYERS <span class="count">${n} / 7</span></h2><ul class="plist">${rows}</ul></div>`
     + `<div class="section"><h2 class="display">AUCTIONEER</h2><div class="segs">${seg('manual')}${seg('auto')}</div>`
     + `<p class="modetext">${esc(MODES[lobby.mode].text)}</p></div>`
+    + `${renderSettings(lobby, isHost)}`
     + `${startArea}<p class="toast-line" role="status"></p>`
     + `<button class="link" data-act="leave">Leave room</button></div></div></div>`;
 }
@@ -40,6 +67,7 @@ const TOASTS = {
   'bad-count': 'You need 3 to 7 players to start.',
   'not-host': 'Only the host can do that.',
   started: 'The game already started.',
+  'bad-setting': 'That setting is out of range.',
 };
 
 export function mount(root, ctx) {
@@ -63,6 +91,9 @@ export function mount(root, ctx) {
       catch { toast(link); }
     } else if (act === 'mode') {
       await net.setMode(btn.dataset.mode);
+    } else if (act === 'set') {
+      const res = await net.setSettings({ [btn.dataset.key]: Number(btn.dataset.value) });
+      if (!res?.ok) toast(TOASTS[res?.code] ?? 'Could not change that setting.');
     } else if (act === 'kick') {
       await net.kick(btn.dataset.kick);
     } else if (act === 'start') {

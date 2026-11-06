@@ -15,12 +15,23 @@ function bidding(mode = 'manual') {
 const act = (s, type, by, extra = {}, now = 0) => reduce(s, { type, by, ...extra }, now);
 const code = (fn) => { try { fn(); } catch (e) { return e.code; } return null; };
 
-test('bad bid amounts are rejected; a huge overbid is allowed (the fine exists for that)', () => {
+test('nobody can bid more than they can pay: cash plus the value of their items', () => {
+  const s = bidding();
+  s.players.p1.cash = 700;
+  s.players.p1.items = [{ id: 'rug', tier: 'valuable', name: 'Rug', value: 1500, flavor: 'x' }, { id: 'jnk', tier: 'junk', name: 'Junk', value: -400, flavor: 'x' }];
+  // p1 can pay 700 + 1500 = 2200 (junk never counts)
+  assert.equal(code(() => act(s, 'bid', 'p1', { amount: 2300 })), 'invalid');
+  assert.equal(code(() => act(s, 'bid', 'p1', { amount: 1e12 })), 'invalid');
+  assert.equal(code(() => act(s, 'bid', 'p1', { amount: 2200 })), null);
+  // p2 is richer and can still outbid p1's best
+  assert.equal(code(() => act(act(s, 'bid', 'p1', { amount: 2200 }).state, 'bid', 'p2', { amount: 2300 })), null);
+});
+
+test('bad bid amounts are rejected', () => {
   const s = bidding();
   for (const amount of [150, 0, -100, NaN, '200', 99, undefined, 100.5]) {
     assert.equal(code(() => act(s, 'bid', 'p1', { amount })), 'invalid', String(amount));
   }
-  assert.equal(code(() => act(s, 'bid', 'p1', { amount: 1e12 })), null);
   const withBid = act(s, 'bid', 'p1', { amount: 300 }).state;
   assert.equal(code(() => act(withBid, 'bid', 'p2', { amount: 300 })), 'invalid');
   assert.equal(code(() => act(withBid, 'bid', 'p2', { amount: 200 })), 'invalid');

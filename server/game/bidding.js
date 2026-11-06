@@ -1,5 +1,5 @@
 import { ActionError, registerHandler, registerTimeout } from './registry.js';
-import { TIMERS, assets, buyInOrder, isAuto } from './state.js';
+import { TIMERS, assets, buyInOrder, endRound, isAuto } from './state.js';
 
 const need = (ok, code, msg) => { if (!ok) throw new ActionError(code, msg); };
 
@@ -23,11 +23,21 @@ function rearm(state, now) {
     : { kind: 'bid-idle', at: now + TIMERS.bidIdle };
 }
 
+/**
+ * The automatic $100 opening bid goes to the first buyer left of the Auctioneer who can actually pay it.
+ * Returns false (and ends the round) when nobody can.
+ */
 function autoOpen(state, now, events) {
-  const first = bidders(state)[0];
+  const first = bidders(state).find((id) => assets(state.players[id]) >= 100);
+  if (!first) {
+    events.push({ type: 'discarded' });
+    endRound(state, now, events);
+    return false;
+  }
   state.bid = { amount: 100, bidderId: first };
   state.call = 0;
   events.push({ type: 'bid', by: first, amount: 100, auto: true });
+  return true;
 }
 
 function sold(state, now, events) {
@@ -46,6 +56,7 @@ registerHandler('bid', (state, action, now, events) => {
   need(state.bid?.bidderId !== action.by, 'not-allowed', 'you already lead');
   const a = action.amount;
   need(Number.isInteger(a) && a >= 100 && a % 100 === 0 && a > (state.bid?.amount ?? 0), 'invalid', 'bad amount');
+  need(a <= assets(state.players[action.by]), 'invalid', 'more than you can pay');
   state.bid = { amount: a, bidderId: action.by };
   state.call = 0;
   events.push({ type: 'bid', by: action.by, amount: a });
@@ -56,7 +67,7 @@ registerHandler('call', (state, action, now, events) => {
   need(state.phase === 'bidding', 'wrong-phase');
   need(action.by === state.auctioneerId && !isAuto(state), 'not-allowed');
   if (!state.bid) {
-    autoOpen(state, now, events);
+    if (!autoOpen(state, now, events)) return;
   } else if (state.call < 2) {
     state.call += 1;
     events.push({ type: 'call', n: state.call });
@@ -68,8 +79,7 @@ registerHandler('call', (state, action, now, events) => {
 });
 
 registerTimeout('opening', (state, now, events) => {
-  autoOpen(state, now, events);
-  rearm(state, now);
+  if (autoOpen(state, now, events)) rearm(state, now);
 });
 
 registerTimeout('call', (state, now, events) => {
@@ -85,6 +95,6 @@ registerTimeout('call', (state, now, events) => {
 registerTimeout('bid-idle', (state, now, events) => {
   state.roundAuto = true;
   events.push({ type: 'auto-takeover' });
-  if (!state.bid) autoOpen(state, now, events);
+  if (!state.bid && !autoOpen(state, now, events)) return;
   rearm(state, now);
 });

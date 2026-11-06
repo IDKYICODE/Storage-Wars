@@ -122,6 +122,38 @@ test('kick and mode: host only, lobby only', () => {
   assert.equal(code(() => rooms.setMode(a.token, 'manual')), 'started');
 });
 
+test('settings: host only, lobby only, validated, and they reach the game', () => {
+  const rooms = mk();
+  const a = rooms.create('Ayush');
+  const b = rooms.join(a.room.code, 'Bea');
+  rooms.join(a.room.code, 'Cal');
+  assert.deepEqual(rooms.snapshot(a.room, a.player.id).lobby.settings, { turns: 2, startCash: 5000, buyIn: 100 });
+  assert.equal(rooms.snapshot(a.room, a.player.id).lobby.maxTurns, 4);
+  assert.equal(code(() => rooms.setSettings(b.token, { turns: 1 })), 'not-host');
+  for (const bad of [{ turns: 0 }, { turns: 5 }, { turns: 1.5 }, { startCash: 500 }, { startCash: 25000 }, { startCash: 1500 },
+    { buyIn: 0 }, { buyIn: 1100 }, { buyIn: 150 }, { nope: 1 }, { turns: '2' }, null]) {
+    assert.equal(code(() => rooms.setSettings(a.token, bad)), 'bad-setting', JSON.stringify(bad));
+  }
+  assert.deepEqual(a.room.settings, { turns: 2, startCash: 5000, buyIn: 100 }); // nothing half-applied
+  rooms.setSettings(a.token, { turns: 3, startCash: 8000, buyIn: 300 });
+  rooms.start(a.token);
+  assert.deepEqual(a.room.game.config, { turns: 3, startCash: 8000, buyIn: 300 });
+  assert.equal(a.room.game.players[b.player.id].cash, 8000);
+  assert.equal(code(() => rooms.setSettings(a.token, { turns: 1 })), 'started');
+});
+
+test('rounds each are capped by the player count at start, even if set while the room was smaller', () => {
+  const rooms = mk();
+  const a = rooms.create('Ayush');
+  rooms.join(a.room.code, 'Bea');
+  rooms.join(a.room.code, 'Cal');
+  rooms.setSettings(a.token, { turns: 4 });
+  for (const n of ['D', 'E', 'F', 'G']) rooms.join(a.room.code, `Dee${n}`); // 7 players: 14 / 7 = 2 each
+  assert.equal(rooms.snapshot(a.room, a.player.id).lobby.maxTurns, 2);
+  rooms.start(a.token);
+  assert.equal(a.room.game.config.turns, 2);
+});
+
 test('leaving the lobby frees the seat and passes the host crown; an empty room is deleted', () => {
   const rooms = mk();
   const a = rooms.create('Ayush');
@@ -165,7 +197,7 @@ test('act ignores any claimed actor and turns illegal actions into an error resu
   const decider = b.player.id;
   g.phase = 'buyin';
   g.auctioneerId = a.player.id;
-  g.buyInTurn = decider;
+  g.buyIns = {};
   g.deadline = { kind: 'buyin', at: clock + 25_000 };
   // Ayush pretends to be Bea
   const spoof = rooms.act(a.token, { type: 'pass', by: decider });
@@ -184,7 +216,8 @@ test('act before the game starts reports no-game; tick drives timers and returns
   assert.equal(rooms.act(a.token, { type: 'pass' }).error.code, 'no-game');
   const s = started('auto');
   s.room.game.phase = 'buyin';
-  s.room.game.buyInTurn = s.b.player.id;
+  s.room.game.buyIns = {};
+  s.room.game.auctioneerId = s.a.player.id;
   s.room.game.deadline = { kind: 'buyin', at: clock + 100 };
   const changed = s.rooms.tick(clock + 200);
   assert.equal(changed.length, 1);

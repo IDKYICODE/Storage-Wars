@@ -32,10 +32,10 @@ function play(seed, n, mode) {
   for (let steps = 0; s.phase !== 'gameover'; steps++) {
     assert.ok(steps < 5000, `seed ${seed} n ${n} did not finish`);
     if (s.phase === 'buyin') {
-      apply({ type: rnd() < 0.6 ? 'buyin' : 'pass', by: s.buyInTurn });
+      for (const id of ids) apply({ type: rnd() < 0.6 ? 'buyin' : 'pass', by: id }); // everyone decides at once
     } else if (s.phase === 'bidding') {
       const who = ids[Math.floor(rnd() * ids.length)];
-      const reckless = rnd() < 0.08; // overbids far beyond what they can pay: exercises fines and eliminations
+      const reckless = rnd() < 0.08; // tries to bid far beyond what they can pay: the server must refuse it
       if (rnd() < 0.4) apply({ type: 'bid', by: who, amount: (s.bid?.amount ?? 0) + (reckless ? 9000 : 100 * (1 + Math.floor(rnd() * 3))) });
       if (mode === 'manual' && rnd() < 0.5) apply({ type: 'call', by: s.auctioneerId });
     } else if (s.phase === 'payment') {
@@ -70,7 +70,8 @@ for (const mode of ['auto', 'manual']) {
       }
     }
     // the scripts must actually reach the interesting paths, or this test proves little
-    for (const t of ['sold', 'paid', 'fined', 'voided', 'discarded', 'round-end', 'game-over']) {
+    // (no 'fined': bids above what a player can pay are rejected now, so fines cannot happen in play)
+    for (const t of ['sold', 'paid', 'voided', 'discarded', 'round-end', 'game-over']) {
       assert.ok(everSeen.has(t), `no game ever produced a '${t}' event`);
     }
   });

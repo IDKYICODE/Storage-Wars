@@ -30,7 +30,7 @@ test('flip: only the Auctioneer may flip, index must be valid, a safe flip opens
   const { state, events } = act(s, 'flip', 'p0', { index: 2 });
   assert.equal(state.slots[2].faceUp, true);
   assert.equal(state.phase, 'buyin');
-  assert.equal(state.buyInTurn, 'p1');
+  assert.deepEqual(state.deadline, { kind: 'buyin', at: 25000 });
   assert.ok(events.some((e) => e.type === 'flipped' && e.index === 2));
   assert.equal(code(() => act(state, 'flip', 'p0', { index: 3 })), 'wrong-phase');
 });
@@ -93,29 +93,50 @@ test('peeking a face-up crate or an out-of-range crate is invalid', () => {
   assert.equal(code(() => act(flipped, 'peek', 'p1', { index: 7 })), 'invalid');
 });
 
-test('buy-in: in turn, cash only, exactly $100 to the Auctioneer, no double clicks', () => {
+test('buy-in is simultaneous: every player can decide at once, in any order', () => {
+  let s = setup({ unit: 'locker' });
+  // p3 goes first, then p2, then p1: nobody has to wait for a turn
+  s = act(s, 'buyin', 'p3').state;
+  s = act(s, 'buyin', 'p2').state;
+  assert.equal(s.phase, 'buyin');
+  assert.deepEqual(s.buyIns, { p3: 'in', p2: 'in' });
+  s = act(s, 'buyin', 'p1').state;
+  assert.equal(s.phase, 'bidding'); // all decided: bidding opens at once
+  assert.equal(s.players.p0.cash, 5300); // three buy-ins of $100 to the Auctioneer
+});
+
+test('buy-in: cash only, the configured fee, the Auctioneer cannot, no double clicks', () => {
   const s = setup({ unit: 'locker' });
-  assert.equal(code(() => act(s, 'buyin', 'p2')), 'not-allowed');
   assert.equal(code(() => act(s, 'buyin', 'p0')), 'not-allowed');
   const { state } = act(s, 'buyin', 'p1');
   assert.equal(state.players.p1.cash, 4900);
   assert.equal(state.players.p0.cash, 5100);
   assert.equal(state.buyIns.p1, 'in');
-  assert.equal(state.buyInTurn, 'p2');
-  assert.equal(code(() => act(state, 'buyin', 'p1')), 'not-allowed');
+  assert.equal(code(() => act(state, 'buyin', 'p1')), 'not-allowed'); // already decided
+  assert.equal(code(() => act(state, 'pass', 'p1')), 'not-allowed');
 
   const broke = setup({ unit: 'locker' });
   broke.players.p1.cash = 50;
   assert.equal(code(() => act(broke, 'buyin', 'p1')), 'invalid');
+
+  const pricey = setup({ unit: 'locker' });
+  pricey.config.buyIn = 500;
+  const paid = act(pricey, 'buyin', 'p2').state;
+  assert.equal(paid.players.p2.cash, 4500);
+  assert.equal(paid.players.p0.cash, 5500);
 });
 
-test('buy-in timer auto-passes the current decider and moves on', () => {
-  const s = setup({ unit: 'locker' });
+test('the shared buy-in clock passes for everyone who has not decided', () => {
+  let s = setup({ unit: 'locker' });
   assert.deepEqual(s.deadline, { kind: 'buyin', at: 25000 });
+  s = act(s, 'buyin', 'p2').state;
+  assert.deepEqual(s.deadline, { kind: 'buyin', at: 25000 }); // deciding does not restart the clock
   const out = tick(s, 25000);
   assert.equal(out.state.buyIns.p1, 'pass');
-  assert.equal(out.state.buyInTurn, 'p2');
-  assert.deepEqual(out.state.deadline, { kind: 'buyin', at: 50000 });
+  assert.equal(out.state.buyIns.p3, 'pass');
+  assert.equal(out.state.buyIns.p2, 'in');
+  assert.equal(out.state.phase, 'bidding');
+  assert.equal(out.events.filter((e) => e.type === 'pass' && e.auto).length, 2);
 });
 
 test('everyone passes: unit discarded, round over, no money moves', () => {

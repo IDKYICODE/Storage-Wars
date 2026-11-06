@@ -1,4 +1,4 @@
-import { isAuto } from './state.js';
+import { isAuto, undecidedBuyers } from './state.js';
 import { bidders } from './bidding.js';
 import { suggestPayment, assets } from './payment.js';
 
@@ -42,14 +42,16 @@ export function viewFor(state, me) {
     else canPeek = ['buyin', 'peekwin'].includes(state.phase) && state.unit.peek !== 'never'
       && (state.unit.peek === 'before' || state.buyIns[me] === 'in');
   }
-  const myTurnToDecide = state.phase === 'buyin' && state.buyInTurn === me;
+  const myTurnToDecide = state.phase === 'buyin' && undecidedBuyers(state).includes(me);
   const can = {
     flip: alive && state.phase === 'flip' && isAuctioneer && !isAuto(state),
     peek: canPeek,
     ready: alive && state.phase === 'peekwin' && state.buyIns[me] === 'in' && !state.ready.includes(me) && !hasPeeked,
-    buyin: alive && myTurnToDecide && mine.cash >= 100,
+    buyin: alive && myTurnToDecide && mine.cash >= state.config.buyIn,
     pass: alive && myTurnToDecide,
-    bid: alive && state.phase === 'bidding' && bidders(state).includes(me) && state.bid?.bidderId !== me,
+    // you can bid only while you can pay a higher bid than the current one
+    bid: alive && state.phase === 'bidding' && bidders(state).includes(me) && state.bid?.bidderId !== me
+      && assets(mine) >= (state.bid?.amount ?? 0) + 100,
     call: alive && state.phase === 'bidding' && isAuctioneer && !isAuto(state),
     pay: alive && state.phase === 'payment' && winnerId === me,
   };
@@ -58,7 +60,8 @@ export function viewFor(state, me) {
     you: me,
     phase: state.phase,
     roundNo: state.roundNo,
-    totalRounds: 2 * state.order.length,
+    totalRounds: state.config.turns * state.order.length,
+    config: state.config,
     mode: state.mode,
     roundAuto: state.roundAuto,
     auctioneerId: state.auctioneerId,
@@ -68,7 +71,6 @@ export function viewFor(state, me) {
     myItems: mine.items,
     bid: state.bid,
     call: state.call,
-    buyInTurn: state.buyInTurn,
     can,
     winner: state.winner,
     payment: can.pay

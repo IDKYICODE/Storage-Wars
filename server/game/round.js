@@ -1,6 +1,6 @@
 import { ActionError, registerHandler, registerTimeout } from './registry.js';
 import { rand } from './rng.js';
-import { TIMERS, endRound, openBuyIn, nextBuyer, isAuto } from './state.js';
+import { TIMERS, endRound, openBuyIn, undecidedBuyers, isAuto } from './state.js';
 import { enterBidding } from './bidding.js';
 
 const need = (ok, code, msg) => { if (!ok) throw new ActionError(code, msg); };
@@ -30,13 +30,7 @@ function maybeEndPeekWindow(state, now) {
 }
 
 function afterBuyInDecision(state, now, events) {
-  const next = nextBuyer(state);
-  if (next) {
-    state.buyInTurn = next;
-    state.deadline = { kind: 'buyin', at: now + TIMERS.buyIn };
-    return;
-  }
-  state.buyInTurn = null;
+  if (undecidedBuyers(state).length) return; // everyone decides at the same time; the shared clock keeps running
   state.deadline = null;
   const buyers = state.order.filter((id) => state.buyIns[id] === 'in');
   if (!buyers.length) {
@@ -85,11 +79,12 @@ registerHandler('ready', (state, action, now) => {
 
 function decide(state, by, choice, now, events, auto = false) {
   need(state.phase === 'buyin', 'wrong-phase');
-  need(state.buyInTurn === by, 'not-allowed', 'not your turn');
+  need(undecidedBuyers(state).includes(by), 'not-allowed', 'you have already decided, or you cannot buy in');
   if (choice === 'in') {
-    need(state.players[by].cash >= 100, 'invalid', 'not enough cash');
-    state.players[by].cash -= 100;
-    state.players[state.auctioneerId].cash += 100;
+    const fee = state.config.buyIn;
+    need(state.players[by].cash >= fee, 'invalid', 'not enough cash');
+    state.players[by].cash -= fee;
+    state.players[state.auctioneerId].cash += fee;
     state.buyIns[by] = 'in';
     events.push({ type: 'buyin', by });
   } else {
@@ -97,6 +92,11 @@ function decide(state, by, choice, now, events, auto = false) {
     events.push({ type: 'pass', by, auto });
   }
   afterBuyInDecision(state, now, events);
+}
+
+/** Passes for a player who is not deciding (clock ran out, or they are offline). */
+export function autoPass(state, by, now, events) {
+  decide(state, by, 'pass', now, events, true);
 }
 
 registerHandler('buyin', (state, action, now, events) => decide(state, action.by, 'in', now, events));
@@ -108,5 +108,7 @@ registerTimeout('flip-idle', (state, now, events) => {
   events.push({ type: 'auto-takeover' });
   flipRandom(state, now, events);
 });
-registerTimeout('buyin', (state, now, events) => decide(state, state.buyInTurn, 'pass', now, events, true));
+registerTimeout('buyin', (state, now, events) => {
+  for (const id of undecidedBuyers(state)) autoPass(state, id, now, events);
+});
 registerTimeout('peekwin', (state, now) => enterBidding(state, now));

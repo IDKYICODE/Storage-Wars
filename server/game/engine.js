@@ -1,8 +1,8 @@
 import { ActionError, getHandler, getTimeout } from './registry.js';
-import './round.js';
+import { autoPass } from './round.js';
 import './bidding.js';
 import './payment.js';
-import { TIMERS, isAuto } from './state.js';
+import { TIMERS, isAuto, undecidedBuyers } from './state.js';
 
 export { ActionError } from './registry.js';
 export { createGame } from './state.js';
@@ -23,6 +23,7 @@ export function reduce(state, action, now) {
 }
 
 export const AUCTIONEER_OFFLINE_MS = 20000;
+export const OFFLINE_PASS_MS = 8000;
 
 /** Marks a player connected or offline (the server calls this on socket connect/disconnect). */
 export function setPresence(state, playerId, connected, now) {
@@ -39,11 +40,15 @@ function presenceStep(state, now) {
   let next = null;
   const edit = () => (next ??= structuredClone(state));
 
-  while ((next ?? state).phase === 'buyin') {
-    const cur = next ?? state;
-    const id = cur.buyInTurn;
-    if (!id || cur.players[id].connected) break;
-    getTimeout('buyin')(edit(), now, events); // exactly what the 25 s clock would have done
+  // Buy-in is simultaneous: anyone still undecided who has been offline for a few seconds passes for themselves.
+  // (A short grace lets a refreshed page get back in before it loses the decision.)
+  if (state.phase === 'buyin') {
+    for (const id of undecidedBuyers(state)) {
+      const p = state.players[id];
+      if (p.connected || p.offlineSince === null || now - p.offlineSince <= OFFLINE_PASS_MS) continue;
+      autoPass(edit(), id, now, events);
+      if (next.phase !== 'buyin') break;
+    }
   }
 
   const cur = next ?? state;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { tick, setPresence } from '../server/game/engine.js';
+import { tick, setPresence, reduce } from '../server/game/engine.js';
 import { createGame, beginRoundPhase } from '../server/game/state.js';
 import { UNITS } from '../shared/cards.js';
 
@@ -14,6 +14,8 @@ function setup(unit) {
   return s;
 }
 
+const reduceBuy = (s, by) => reduce(s, { type: 'buyin', by }, 0).state;
+
 test('setPresence records who is offline and since when', () => {
   const s = setup('locker');
   const off = setPresence(s, 'p2', false, 500).state;
@@ -25,16 +27,26 @@ test('setPresence records who is offline and since when', () => {
   assert.equal(s.players.p2.connected, true); // input untouched
 });
 
-test('an offline player whose buy-in turn it is passes on the next tick, and so do the next offline ones', () => {
+test('offline players still undecided pass for themselves after a short grace; online players are left alone', () => {
   let s = setup('locker');
-  assert.equal(s.buyInTurn, 'p1');
   s = setPresence(s, 'p1', false, 0).state;
   s = setPresence(s, 'p2', false, 0).state;
-  const out = tick(s, 10);
+  const early = tick(s, 7000); // inside the 8 s grace: a refreshed page can still get back in
+  assert.equal(early.state, s);
+  const out = tick(s, 9000);
   assert.equal(out.state.buyIns.p1, 'pass');
   assert.equal(out.state.buyIns.p2, 'pass');
-  assert.equal(out.state.buyInTurn, 'p3');
+  assert.equal(out.state.buyIns.p3, undefined); // p3 is online and still deciding
+  assert.equal(out.state.phase, 'buyin');
   assert.deepEqual(out.events.filter((e) => e.type === 'pass').map((e) => e.by), ['p1', 'p2']);
+});
+
+test('a player who already bought in is not passed just because they went offline', () => {
+  let s = setup('locker');
+  s = reduceBuy(s, 'p1');
+  s = setPresence(s, 'p1', false, 0).state;
+  const out = tick(s, 30000);
+  assert.equal(out.state.buyIns.p1, 'in');
 });
 
 test('a Manual Auctioneer offline 19 s stays manual; at 21 s the server takes over', () => {

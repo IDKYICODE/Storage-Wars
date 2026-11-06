@@ -16,9 +16,11 @@ export function headline(view) {
     case 'flip':
       if (view.can.flip) return 'Flip a crate, or peek at one';
       return auto ? 'The computer is flipping a crate' : `${A} is choosing a crate to flip`;
-    case 'buyin':
-      if (view.can.pass) return 'Your call: buy in for $100?';
-      return `${nameOf(view, view.buyInTurn)} is deciding…`;
+    case 'buyin': {
+      if (view.can.pass) return `Buy in for ${formatMoney(view.config.buyIn)}, or pass?`;
+      const waiting = view.players.filter((p) => p.buyIn === 'pending').length;
+      return waiting ? `Waiting for ${waiting} ${waiting === 1 ? 'player' : 'players'} to decide…` : 'Buy-in is closing…';
+    }
     case 'peekwin':
       return 'Peek window: buyers may look at one crate';
     case 'bidding':
@@ -45,7 +47,7 @@ export function renderPlayers(view) {
   const chips = view.players.map((p) => {
     const cls = ['chip'];
     if (p.isAuctioneer) cls.push('auct');
-    if (p.id === view.buyInTurn) cls.push('turn');
+    if (p.buyIn === 'pending') cls.push('turn');
     if (view.bid?.bidderId === p.id) cls.push('lead');
     if (p.eliminated) cls.push('out');
     if (p.id === view.you) cls.push('me');
@@ -117,19 +119,23 @@ function renderBidControls(view, ui) {
   const high = view.bid?.amount ?? 0;
   const assets = myAssets(view);
   if (can.bid) {
+    // you can only bid what you can pay (cash plus the value of your items), so bigger steps are switched off
     const quick = [100, 500, 1000].map((add) => {
       const amount = high + add;
-      return `<button class="btn${amount > assets ? ' risky' : ''}" data-act="bid" data-amount="${amount}">+${formatMoney(add)}</button>`;
+      return `<button class="btn" data-act="bid" data-amount="${amount}"${amount > assets ? ' disabled' : ''}>+${formatMoney(add)}</button>`;
     }).join('');
     const custom = parseAmount(ui.custom);
-    const ok = custom !== null && custom > high;
-    const warn = custom !== null && custom > assets;
+    const ok = custom !== null && custom > high && custom <= assets;
+    const tooMuch = custom !== null && custom > assets;
     parts.push(`<div class="quick">${quick}</div>`
       + `<div class="custom"><input id="custom" inputmode="numeric" placeholder="Custom amount" aria-label="Custom bid" value="${esc(ui.custom ?? '')}">`
       + `<button class="btn small go" data-act="bidcustom"${ok ? '' : ' disabled'}>BID</button></div>`
-      + `${warn ? '<p class="risk">More than you can pay: you risk a $1,000 fine.</p>' : ''}`);
+      + `<p class="hint">You can bid up to ${formatMoney(assets)}</p>`
+      + `${tooMuch ? `<p class="risk">That is more than you can pay. The most you can bid is ${formatMoney(assets)}.</p>` : ''}`);
   } else if (view.bid?.bidderId === view.you) {
     parts.push("<p class=\"youwin\">You're winning</p>");
+  } else if (view.you !== view.auctioneerId && view.players.find((p) => p.id === view.you)?.buyIn === 'in') {
+    parts.push(`<p class="hint">You cannot afford to outbid ${formatMoney(high)}. You can bid up to ${formatMoney(assets)}.</p>`);
   } else if (view.you !== view.auctioneerId) {
     parts.push('<p class="hint">You are watching this auction.</p>');
   }
@@ -151,7 +157,7 @@ export function renderActions(view, ui = {}) {
   if (can.flip) parts.push(`<button class="btn warn${ui.pick === 'flip' ? ' on' : ''}" data-pick="flip">FLIP A CRATE</button>`);
   if (can.peek) parts.push(`<button class="btn${ui.pick === 'peek' ? ' on' : ''}" data-pick="peek">PEEK AT A CRATE</button>`);
   if (can.pass) {
-    parts.push(`<button class="btn go" data-act="buyin"${can.buyin ? '' : ' disabled'}>Buy in $100</button>`);
+    parts.push(`<button class="btn go" data-act="buyin"${can.buyin ? '' : ' disabled'}>Buy in ${formatMoney(view.config.buyIn)}</button>`);
     parts.push('<button class="btn" data-act="pass">Pass</button>');
   }
   if (can.ready) parts.push('<button class="btn go" data-act="ready">Ready</button>');

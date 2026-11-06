@@ -21,15 +21,27 @@ function setup({ unit = 'jumbo', mode = 'manual', phase } = {}) {
 }
 const html = (s, id, ui) => renderTable(viewFor(s, id), ui);
 
-test('buy-in: only the current decider is offered Buy in and Pass', () => {
-  const s = setup({ unit: 'locker' }); // locker: no flip, goes straight to buy-in, p1 decides
-  assert.equal(s.buyInTurn, 'p1');
-  assert.ok(html(s, 'p1').includes('Buy in $100'));
-  assert.ok(html(s, 'p1').includes('>Pass<'));
-  for (const other of ['p0', 'p2', 'p3']) {
-    assert.ok(!html(s, other).includes('Buy in $100'), other);
-    assert.ok(!html(s, other).includes('>Pass<'), other);
+test('buy-in: every player except the Auctioneer is offered Buy in and Pass at the same time', () => {
+  const s = setup({ unit: 'locker' }); // locker: no flip, goes straight to buy-in
+  for (const bidder of ['p1', 'p2', 'p3']) {
+    assert.ok(html(s, bidder).includes('Buy in $100'), bidder);
+    assert.ok(html(s, bidder).includes('>Pass<'), bidder);
   }
+  assert.ok(!html(s, 'p0').includes('Buy in $100'));
+  assert.ok(!html(s, 'p0').includes('>Pass<'));
+});
+
+test('once you have decided you are not offered the buttons again', () => {
+  const s = setup({ unit: 'locker' });
+  s.buyIns = { p2: 'in' };
+  assert.ok(!html(s, 'p2').includes('Buy in $100'));
+  assert.ok(html(s, 'p1').includes('Buy in $100'));
+});
+
+test('the buy-in button shows the room\'s fee', () => {
+  const s = setup({ unit: 'locker' });
+  s.config.buyIn = 500;
+  assert.ok(html(s, 'p1').includes('Buy in $500'));
 });
 
 test('a broke player cannot buy in', () => {

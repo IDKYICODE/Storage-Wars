@@ -17,7 +17,6 @@ function midRound() {
   beginRoundPhase(s, 0);
   s.slots[0].faceUp = true; // flipped face-up: public
   s.phase = 'buyin';
-  s.buyInTurn = 'p1';
   s.peeks = { p0: [1], p1: [2], p2: [4] };
   return s;
 }
@@ -75,8 +74,10 @@ test('during the reveal only the winner sees the unit; a voided unit shows just 
 test('can-flags follow the phase, the role and the mode', () => {
   const s = midRound();
   const can = (id) => viewFor(s, id).can;
-  assert.deepEqual([can('p1').buyin, can('p1').pass], [true, true]);
-  assert.deepEqual([can('p2').buyin, can('p2').pass], [false, false]);
+  for (const id of ['p1', 'p2', 'p3']) assert.deepEqual([can(id).buyin, can(id).pass], [true, true], id); // all at once
+  s.buyIns = { p2: 'pass' };
+  assert.deepEqual([can('p2').buyin, can('p2').pass], [false, false]); // decided already
+  s.buyIns = {};
   assert.equal(can('p0').buyin, false);
   assert.equal(can('p0').flip, false);
   assert.equal(can('p3').flip, false);

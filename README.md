@@ -8,16 +8,17 @@ STORAGE WARS is a free online version of the storage-unit auction card game *Bid
 
 ## How a game works
 
-Everyone starts with $5,000. Each round one player is the **Auctioneer** and the others bid on a **storage unit** full of face-down items.
+Everyone starts with the same cash ($5,000 by default). Each round one player is the **Auctioneer** and the others bid on a **storage unit** full of face-down items.
 
-- **Buy in** for $100 to join the auction (the Auctioneer keeps it), or pass.
+- **Buy in** (by default $100, paid to the Auctioneer) to join the auction, or pass. Everyone decides at the same time.
 - **Peek** at a crate or watch the Auctioneer flip one, depending on how big the unit is. Peeks are private: only you see what you peeked at.
-- **Bid** in steps of $100. When the bidding stops, the Auctioneer calls "going once, going twice, SOLD!".
+- **Bid** in steps of $100, up to what you can pay (cash plus the value of your items). When the bidding stops, the Auctioneer calls "going once, going twice, SOLD!".
 - The winner **pays** with cash or items they already won, and opens the unit. Junk costs you money, valuables pay off, and a **Havoc** card wipes out the whole unit, so you paid for nothing.
-- If the winner can't pay, they take a $1,000 fine and the auction restarts without them.
-- Everyone is Auctioneer twice. The richest player (cash plus item values) wins.
+- Everyone is Auctioneer the same number of times. The richest player (cash plus item values) wins.
 
-The Auctioneer can be **Manual** (a real player runs the auction) or **Auto** (the server runs it), chosen per room.
+The host sets the game up in the lobby: **Manual** or **Auto** Auctioneer, turns each (1 to 4, at most 14 rounds in total), starting cash ($1,000 to $20,000) and the buy-in fee ($100 to $1,000). A **How to play** booklet with pictures of the real cards and controls is on the entry screen.
+
+Manual means a real player runs each auction; Auto means the server runs it.
 
 ![Lobby with room code and players](docs/screenshots/lobby.jpg)
 

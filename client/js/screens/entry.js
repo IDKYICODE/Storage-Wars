@@ -1,6 +1,7 @@
 import { ROOM_CODE_ALPHABET } from '../../../shared/cards.js';
 import { esc } from '../art/kit.js';
 import { renderStorageFront } from '../art/scenes.js';
+import { openRules } from './rules.js';
 
 const NAME_KEY = 'storage-wars-name';
 
@@ -24,6 +25,8 @@ export const validName = (name) => {
 /** Uppercases and keeps only letters that can appear in a room code, at most 4. */
 export const cleanCode = (raw) => [...String(raw ?? '').toUpperCase()].filter((c) => ROOM_CODE_ALPHABET.includes(c)).slice(0, 4).join('');
 
+const RULES_BTN = '<button class="btn small rules-open" data-act="rules">HOW TO PLAY</button>';
+
 function codeBoxes(code) {
   return Array.from({ length: 4 }, (_, i) => (i === code.length ? '<b class="cur"></b>' : `<b>${esc(code[i] ?? '')}</b>`)).join('');
 }
@@ -35,7 +38,7 @@ function codeBoxes(code) {
 export function renderEntry({ step = 'title', error = '', name = '', code = '' } = {}) {
   const notice = error ? `<p class="notice" role="alert">${esc(error)}</p>` : '';
   if (step === 'title') {
-    return `<div class="entry title">${renderStorageFront()}${notice}</div>`;
+    return `<div class="entry title">${renderStorageFront()}${notice}${RULES_BTN}</div>`;
   }
   const nameOk = validName(name);
   const joinOk = nameOk && code.length === 4;
@@ -49,7 +52,7 @@ export function renderEntry({ step = 'title', error = '', name = '', code = '' }
     + `<span class="or">no code? start your own</span>`
     + `<button class="btn warn" data-act="create"${nameOk ? '' : ' disabled'}>CREATE A ROOM</button>`
     + `<p class="notice dark" role="alert">${esc(error)}</p>`
-    + `<button class="link" data-act="back">Back</button></div></div></div>`;
+    + `<button class="link" data-act="back">Back</button></div></div>${RULES_BTN}</div>`;
 }
 
 const load = () => { try { return window.localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; } };
@@ -100,6 +103,7 @@ export function mount(root, ctx) {
   const onClick = (e) => {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'enter') enter();
+    else if (act === 'rules') openRules();
     else if (act === 'back') { state.step = 'title'; state.error = ''; paint(); }
     else if (act === 'focus-code') root.querySelector('#code')?.focus();
     else if (act === 'join' && !busy) go(() => ctx.net.join(state.code, state.name));

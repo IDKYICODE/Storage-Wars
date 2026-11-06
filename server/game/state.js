@@ -1,18 +1,39 @@
 import { ITEMS, UNITS, UNIT_IDS } from '../../shared/cards.js';
 import { rand, shuffle } from './rng.js';
 
-export const START_CASH = 5000;
-export const TURNS_PER_PLAYER = 2;
+export const DEFAULT_CONFIG = { startCash: 5000, turns: 2, buyIn: 100 };
+
+/** 16 storage units and 56 items always cover this many rounds (the largest 14 units hold 45 items). */
+export const MAX_TOTAL_ROUNDS = 14;
+/** How many turns each player can be Auctioneer for this many players. */
+export const maxTurns = (players) => Math.max(1, Math.min(4, Math.floor(MAX_TOTAL_ROUNDS / players)));
+
+const isStep = (v, lo, hi, step) => Number.isInteger(v) && v >= lo && v <= hi && v % step === 0;
+/** True if `patch` only holds legal values (used when the host edits settings in the lobby). */
+export function settingProblem(key, value) {
+  if (key === 'startCash') return isStep(value, 1000, 20000, 1000) ? null : 'startCash must be a whole thousand from $1,000 to $20,000';
+  if (key === 'buyIn') return isStep(value, 100, 1000, 100) ? null : 'buyIn must be a multiple of $100 up to $1,000';
+  if (key === 'turns') return isStep(value, 1, 4, 1) ? null : 'turns must be 1 to 4';
+  return `unknown setting ${key}`;
+}
+
+/** Fills defaults and clamps what depends on the player count. Never throws. */
+export function normalizeConfig(cfg = {}, players = 3) {
+  const pick = (key) => (cfg[key] !== undefined && !settingProblem(key, cfg[key]) ? cfg[key] : DEFAULT_CONFIG[key]);
+  return { startCash: pick('startCash'), buyIn: pick('buyIn'), turns: Math.min(pick('turns'), maxTurns(players)) };
+}
 
 /** players: [{id, name}] in seat order. Returns a state already in its first round. */
-export function createGame(players, mode, seed, now = 0) {
+export function createGame(players, mode, seed, now = 0, config = {}) {
+  const cfg = normalizeConfig(config, players.length);
   const state = {
     seed: seed >>> 0,
     mode,
+    config: cfg,
     roundNo: 1,
     order: players.map((p) => p.id),
     players: Object.fromEntries(players.map((p) => [p.id, {
-      id: p.id, name: p.name, cash: START_CASH, items: [], eliminated: false,
+      id: p.id, name: p.name, cash: cfg.startCash, items: [], eliminated: false,
       connected: true, offlineSince: null, turnsPlayed: 0,
     }])),
     auctioneerId: null,
@@ -24,7 +45,6 @@ export function createGame(players, mode, seed, now = 0) {
     peeks: {},
     ready: [],
     buyIns: {},
-    buyInTurn: null,
     bid: null,
     call: 0,
     roundAuto: false,
@@ -52,7 +72,6 @@ export function startRound(state, now) {
   state.peeks = {};
   state.ready = [];
   state.buyIns = {};
-  state.buyInTurn = null;
   state.bid = null;
   state.call = 0;
   state.roundAuto = false;
@@ -94,12 +113,13 @@ export function buyInOrder(state) {
   return out;
 }
 
-export const nextBuyer = (state) => buyInOrder(state).find((id) => state.buyIns[id] === undefined) ?? null;
+/** Players who have not yet chosen buy in or pass. Everyone decides at the same time. */
+export const undecidedBuyers = (state) => buyInOrder(state).filter((id) => state.buyIns[id] === undefined);
 
+/** One shared clock for the whole buy-in phase; whoever has not chosen when it runs out passes. */
 export function openBuyIn(state, now) {
   state.phase = 'buyin';
-  state.buyInTurn = nextBuyer(state);
-  state.deadline = state.buyInTurn ? { kind: 'buyin', at: now + TIMERS.buyIn } : null;
+  state.deadline = { kind: 'buyin', at: now + TIMERS.buyIn };
 }
 
 /** What a player can pay with: cash plus the face value of items worth more than nothing (junk never counts). */
@@ -122,7 +142,7 @@ export function advance(state, now) {
     for (let step = 1; step <= state.order.length; step++) {
       const id = state.order[(from + step) % state.order.length];
       const p = state.players[id];
-      if (!p.eliminated && p.turnsPlayed < TURNS_PER_PLAYER) { next = id; break; }
+      if (!p.eliminated && p.turnsPlayed < state.config.turns) { next = id; break; }
     }
   }
   if (!next) {

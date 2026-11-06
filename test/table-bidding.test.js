@@ -70,28 +70,30 @@ test('auto mode: no call button, but everyone sees the call banner', () => {
   assert.ok(html(bidding({ bid: { amount: 300, bidderId: 'p1' }, call: 2 }), 'p3').includes('GOING TWICE…'));
 });
 
-test('a custom bid above what you can pay shows the fine warning but is not blocked', () => {
+test('a custom bid above what you can pay is blocked with a clear message', () => {
   const s = bidding({ bid: { amount: 300, bidderId: 'p1' } });
-  const risky = html(s, 'p2', { custom: '9000' });
-  assert.ok(risky.includes('risk a $1,000 fine'));
-  assert.ok(!/data-act="bidcustom"[^>]*disabled/.test(risky));
+  const over = html(s, 'p2', { custom: '9000' });
+  assert.ok(over.includes('more than you can pay'));
+  assert.ok(over.includes('$5,000'));
+  assert.match(over, /data-act="bidcustom"[^>]*disabled/);
   const fine = html(s, 'p2', { custom: '600' });
-  assert.ok(!fine.includes('risk a $1,000 fine'));
-  assert.ok(!/data-act="bidcustom"[^>]*disabled/.test(fine));
+  assert.ok(!fine.includes('more than you can pay'));
+  assert.doesNotMatch(fine, /data-act="bidcustom"[^>]*disabled/);
 });
 
-test('quick-bid buttons that would exceed your assets are marked risky', () => {
+test('quick-bid buttons that would exceed your assets are switched off', () => {
   const s = bidding({ bid: { amount: 4800, bidderId: 'p1' } }); // +1000 = 5800 > $5,000
   const h = html(s, 'p2');
-  assert.match(h, /class="btn risky"[^>]*data-amount="5800"/);
-  assert.doesNotMatch(h, /class="btn risky"[^>]*data-amount="4900"/);
+  assert.match(h, /data-amount="5800"[^>]*disabled/);
+  assert.doesNotMatch(h, /data-amount="4900"[^>]*disabled/);
 });
 
 test('custom amounts must be multiples of 100, above the current bid, and numeric', () => {
   const s = bidding({ bid: { amount: 300, bidderId: 'p1' } });
   const disabled = (custom) => /data-act="bidcustom"[^>]*disabled/.test(html(s, 'p2', { custom }));
   for (const bad of ['', 'abc', '350', '300', '200', '-400', '1e3', '12.5', ' ']) assert.equal(disabled(bad), true, JSON.stringify(bad));
-  for (const good of ['400', '5000', '90000']) assert.equal(disabled(good), false, good);
+  for (const good of ['400', '5000']) assert.equal(disabled(good), false, good);
+  assert.equal(disabled('90000'), true); // above what p2 can pay
 });
 
 test('parseAmount accepts only whole multiples of 100 of at least 100', () => {
