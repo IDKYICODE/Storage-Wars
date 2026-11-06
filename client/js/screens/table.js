@@ -6,7 +6,7 @@ export { renderTable };
 const REVEAL_SOUND = { junk: 'revealJunk', common: 'revealCommon', valuable: 'revealValuable', unique: 'revealUnique', havoc: 'revealHavoc' };
 
 export function mount(root, ctx) {
-  const { net, sounds, fx } = ctx;
+  const { net, sounds, fx, voice } = ctx;
   let view = net.last.state?.view;
   let prev = null;
   const ui = { pick: null };
@@ -76,6 +76,7 @@ export function mount(root, ctx) {
   const playEvents = (events) => {
     for (const f of feedbackFor(events, { you: view.you, nameOf })) {
       if (f.sound) sounds.play(f.sound);
+      if (f.speak) voice?.say(f.speak);
       if (f.banner) banner(f.banner.text, f.banner.kind);
       if (f.toast) toast(f.toast);
       if (f.shake) fx.shake(root.querySelector('.table'));

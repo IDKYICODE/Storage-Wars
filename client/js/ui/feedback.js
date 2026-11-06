@@ -1,10 +1,13 @@
 // Turns game events into the sounds, stamps and messages players see and hear. Pure, so it is tested in Node;
 // the table screen performs what this returns.
 
+const BOLD = { pitch: 0.2, rate: 0.8, volume: 1 };
+const isSahil = (name) => String(name).trim().toLowerCase() === 'sahil';
+
 /**
  * @param {object[]} events  the player's own filtered events from one state push
  * @param {{ you: string, nameOf: (id: string) => string }} ctx
- * @returns {{ sound?: string, banner?: {text: string, kind: string}, toast?: string, shake?: boolean, flash?: string, slam?: boolean }[]}
+ * @returns {{ speak?: {text: string, pitch: number, rate: number, volume: number}, sound?: string, banner?: {text: string, kind: string}, toast?: string, shake?: boolean, flash?: string, slam?: boolean }[]}
  */
 export function feedbackFor(events, { you, nameOf }) {
   const out = [];
@@ -14,7 +17,11 @@ export function feedbackFor(events, { you, nameOf }) {
       case 'bid': out.push({ sound: 'bid' }); break;
       case 'call': out.push({ sound: e.n === 1 ? 'gavel1' : 'gavel2' }); break;
       case 'sold':
-        out.push({ sound: 'sold', slam: true, banner: { text: 'SOLD!', kind: 'sold' } });
+        if (isSahil(nameOf(e.playerId))) {
+          out.push({ sound: 'sold', slam: true, banner: { text: 'SOLD TO FAT FAH', kind: 'sold' }, speak: { text: 'Sold to fat fah!', ...BOLD } });
+        } else {
+          out.push({ sound: 'sold', slam: true, banner: { text: 'SOLD!', kind: 'sold' }, speak: { text: 'Sold!', ...BOLD } });
+        }
         out.push({ toast: `${nameOf(e.playerId)} wins it for $${e.price.toLocaleString('en-US')}` });
         break;
       case 'fined':

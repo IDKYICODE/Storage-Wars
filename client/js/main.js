@@ -1,5 +1,6 @@
 import { createNet } from './net.js';
 import { createSounds } from './ui/sounds.js';
+import { createVoice } from './ui/voice.js';
 import * as fx from './ui/fx.js';
 import { renderHallScene } from './art/scenes.js';
 // importing the art modules registers every illustration with the card renderer
@@ -18,7 +19,8 @@ const overlay = document.getElementById('overlay');
 // tabs, which silently turned extra tabs into the same player (shared bids, shared private peeks).
 const net = createNet(window.io(), window.sessionStorage);
 const sounds = createSounds(window.AudioContext || window.webkitAudioContext, window.localStorage);
-const ctx = { net, sounds, fx, notice: null, route };
+const voice = createVoice(window.speechSynthesis, window.SpeechSynthesisUtterance, () => sounds.isMuted());
+const ctx = { net, sounds, fx, voice, notice: null, route };
 
 // Sound toggle (always visible) and a click sound on every button.
 const SPEAKER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/>';

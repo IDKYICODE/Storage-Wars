@@ -149,7 +149,7 @@
 .banner {
   position: fixed; left: 50%; top: 38%; z-index: 200; pointer-events: none; transform: translate(-50%, -50%) rotate(-6deg);
   padding: 8px 34px 4px; border: 6px solid var(--ink); border-radius: 18px; box-shadow: 0 10px 0 var(--ink);
-  font: 400 clamp(54px, 16vw, 110px)/1 var(--display); letter-spacing: 4px; color: #fff; white-space: nowrap; animation: stamp 2.3s both;
+  font: 400 clamp(54px, 16vw, 110px)/1 var(--display); letter-spacing: 4px; color: #fff; width: max-content; max-width: 90vw; text-align: center; animation: stamp 2.3s both;
 }
 .banner.sold { background: var(--go); color: var(--ink); } .banner.fined { background: var(--bad); } .banner.void { background: var(--havoc); color: var(--warn); }
 @keyframes stamp { 0% { transform: translate(-50%, -50%) rotate(-6deg) scale(3); opacity: 0; } 12% { transform: translate(-50%, -50%) rotate(-6deg) scale(0.92); opacity: 1; } 18% { transform: translate(-50%, -50%) rotate(-6deg) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(-6deg) scale(1.05); } }
