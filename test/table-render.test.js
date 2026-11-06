@@ -144,3 +144,14 @@ test('eliminated players are marked in the strip', () => {
   s.players.p3.eliminated = true;
   assert.ok(/class="chip[^"]*out/.test(html(s, 'p1')));
 });
+
+test('the Auctioneer is told why they cannot buy in or bid', () => {
+  const s = setup({ unit: 'locker' });
+  const note = 'You are the Auctioneer';
+  assert.ok(html(s, 'p0').includes(note));
+  assert.ok(!html(s, 'p1').includes(note));
+  s.phase = 'bidding';
+  s.buyIns = { p1: 'in', p2: 'in' };
+  assert.ok(html(s, 'p0').includes(note));
+  assert.ok(html(s, 'p0').includes('collect the buy-ins'));
+});

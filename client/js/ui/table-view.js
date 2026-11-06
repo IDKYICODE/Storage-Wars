@@ -161,8 +161,10 @@ export function renderActions(view, ui = {}) {
     parts.push('<button class="btn" data-act="pass">Pass</button>');
   }
   if (can.ready) parts.push('<button class="btn go" data-act="ready">Ready</button>');
+  const auctNote = view.you === view.auctioneerId && ['buyin', 'peekwin', 'bidding'].includes(view.phase)
+    ? '<p class="hint auctnote">You are the Auctioneer this round: you collect the buy-ins and cannot bid.</p>' : '';
   const hint = ui.pick ? `<p class="hint">Tap a crate to ${ui.pick}.</p>` : '';
-  return `<div class="actions">${hint}<div class="abtns">${parts.join('')}</div></div>`;
+  return `<div class="actions">${auctNote}${hint}<div class="abtns">${parts.join('')}</div></div>`;
 }
 
 /** The whole table. `ui` is local screen state: { pick: null | 'flip' | 'peek' }. */
