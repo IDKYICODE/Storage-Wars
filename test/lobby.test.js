@@ -102,3 +102,12 @@ test('a non-host sees the settings but cannot change them', () => {
   assert.ok(!html.includes('data-act="set"'));
   assert.ok(html.includes('$5,000') && html.includes('8 rounds in total'));
 });
+
+test('below 3 players the total line talks about turns, in both modes (in Auto the computer runs the auction)', () => {
+  for (const mode of ['manual', 'auto']) {
+    const html = renderLobby(mk(1, { mode, settings: { turns: 5, startCash: 5000, buyIn: 100 } }));
+    assert.ok(html.includes('Each player gets 5 turns'), mode);
+    assert.ok(!/runs 5 auctions/.test(html), mode);
+  }
+  assert.ok(renderLobby(mk(2, { settings: { turns: 1, startCash: 5000, buyIn: 100 } })).includes('Each player gets 1 turn'));
+});

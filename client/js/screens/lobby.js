@@ -30,7 +30,7 @@ function renderSettings(lobby, isHost) {
   return `<div class="section"><h2 class="display">GAME RULES</h2>`
     + `${isHost ? `<div class="segs quick">${quick}</div>` : ''}`
     + `${stepper('turns', 'Turns each', String)}`
-    + `<p class="modetext">${n < 3 ? `Each player runs ${turns} ${turns === 1 ? 'auction' : 'auctions'}` : `${turns * n} rounds in total`}</p>`
+    + `<p class="modetext">${n < 3 ? `Each player gets ${turns} ${turns === 1 ? 'turn' : 'turns'}` : `${turns * n} rounds in total`}</p>`
     + `${stepper('startCash', 'Starting cash', formatMoney)}${stepper('buyIn', 'Buy-in fee', formatMoney)}</div>`;
 }
 

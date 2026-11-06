@@ -96,7 +96,7 @@ const PAGES = [
     title: 'THE FINISH',
     art: () => `<div class="rb-strip">${still(renderPlayers(view({ bid: { amount: 0, bidderId: 'a' } })))}</div>`,
     text: [
-      'Everybody takes the Auctioneer seat the same number of times. Before the game, the host can set how many turns each, the starting cash and the buy-in fee.',
+      'Everybody gets the same number of turns as Auctioneer (in Auto mode the computer runs the auction for you). Before the game, the host can set how many turns each, the starting cash and the buy-in fee.',
       'When the last unit is sold, all items are shown and the richest player wins.',
     ],
   },
