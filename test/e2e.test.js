@@ -161,6 +161,29 @@ test('a dropped client rejoins with its token and gets its seat and a current st
   }
 });
 
+test('opening the same seat in a second tab closes the first tab instead of letting them fight', async () => {
+  const srv = await startServer({ port: 0, tickMs: 1000000, now: () => T0 });
+  try {
+    const { cs, code } = await lobby(srv, 3, 'auto');
+    await cs[0].ask('room:start', {});
+    const first = client(srv.port);
+    await first.ready;
+    assert.equal((await first.ask('room:rejoin', { token: cs[1].token })).ok, true);
+    const closed = [];
+    first.on('closed', (m) => closed.push(m));
+    const second = client(srv.port);
+    await second.ready;
+    assert.equal((await second.ask('room:rejoin', { token: cs[1].token })).ok, true);
+    await until(() => closed.length > 0);
+    assert.deepEqual(closed[0], { reason: 'other-tab' });
+    // the stale tab can no longer act as that player
+    assert.equal((await first.ask('game:act', { type: 'pass' })).ok, false);
+    assert.ok(srv.rooms.rooms.get(code));
+  } finally {
+    await srv.close();
+  }
+});
+
 test('after a server restart an old token is refused cleanly', async () => {
   const first = await startServer({ port: 0, tickMs: 1000000 });
   const c = client(first.port);

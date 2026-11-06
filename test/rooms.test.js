@@ -44,6 +44,24 @@ test('join: case and padding in the code are forgiven; wrong code, full and star
   assert.equal(code(() => s.rooms.join(s.room.code, 'Late')), 'started');
 });
 
+test('after the game starts, an offline player can take their seat back by joining with the same name', () => {
+  const { rooms, room, b } = started();
+  rooms.disconnect(b.token);
+  const back = rooms.join(room.code.toLowerCase(), ' bea ');
+  assert.equal(back.player.id, b.player.id);
+  assert.notEqual(back.token, b.token);
+  assert.equal(rooms.rejoin(b.token), null); // the old token is dead
+  assert.equal(room.game.players[b.player.id].connected, true);
+  assert.equal(room.players.length, 3);
+});
+
+test('after the game starts, nobody can take a seat that is online, and strangers still cannot join', () => {
+  const { rooms, room } = started();
+  assert.equal(code(() => rooms.join(room.code, 'Bea')), 'started'); // Bea is online
+  assert.equal(code(() => rooms.join(room.code, 'Newcomer')), 'started');
+  assert.equal(code(() => rooms.join(room.code, '')), 'started');
+});
+
 test('names: trimmed, collapsed, 1 to 16 characters, unique ignoring case, stored as plain text', () => {
   const rooms = mk();
   const { room } = rooms.create('  Ayush   K  ');

@@ -66,9 +66,25 @@ export class Rooms {
   join(code, name) {
     const room = this.rooms.get(String(code ?? '').trim().toUpperCase());
     if (!room) throw new RoomError('no-room');
-    if (room.game) throw new RoomError('started');
+    if (room.game) return this.#reclaim(room, name);
     if (room.players.length >= MAX_PLAYERS) throw new RoomError('full');
     return this.#addPlayer(room, name);
+  }
+
+  /**
+   * A started game only admits people already in it: joining with the name of an OFFLINE player (closed tab,
+   * dead phone) hands that seat to the newcomer with a fresh token and kills the old one. Anyone else is refused.
+   */
+  #reclaim(room, name) {
+    let clean;
+    try { clean = cleanName(name); } catch { throw new RoomError('started'); }
+    const player = room.players.find((p) => p.name.toLowerCase() === clean.toLowerCase());
+    if (!player || player.connected) throw new RoomError('started');
+    this.tokens.delete(player.token);
+    player.token = hex(12);
+    this.tokens.set(player.token, { room, player });
+    this.#setConnected({ room, player }, true);
+    return { room, player, token: player.token };
   }
 
   /** The room a token belongs to, or null. */

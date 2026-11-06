@@ -14,7 +14,9 @@ import * as end from './screens/end.js';
 
 const root = document.getElementById('app');
 const overlay = document.getElementById('overlay');
-const net = createNet(window.io(), window.localStorage);
+// The saved seat lives in sessionStorage so every browser tab is its own player. localStorage is shared by all
+// tabs, which silently turned extra tabs into the same player (shared bids, shared private peeks).
+const net = createNet(window.io(), window.sessionStorage);
 const sounds = createSounds(window.AudioContext || window.webkitAudioContext, window.localStorage);
 const ctx = { net, sounds, fx, notice: null, route };
 
@@ -64,7 +66,8 @@ net.on('lobby', route);
 net.on('state', route);
 net.on('closed', ({ reason }) => {
   ctx.notice = reason === 'gone' ? 'That room is gone (the server may have restarted).'
-    : reason === 'kicked' ? 'You were removed from the room.' : null;
+    : reason === 'kicked' ? 'You were removed from the room.'
+      : reason === 'other-tab' ? 'This seat was opened in another tab. Use that tab, or join again with the room code and your name.' : null;
   route();
 });
 // a thin bar for short drops, the full overlay once the server looks asleep (free hosting sleeps when idle)

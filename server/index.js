@@ -41,7 +41,14 @@ export function startServer({ port = Number(process.env.PORT) || 3000, tickMs = 
     let token = null;
     let windowStart = 0;
     let count = 0;
-    const bind = (t) => { token = t; sockets.set(t, socket); };
+    // One live connection per seat. If the same seat is opened somewhere else (a second tab, a duplicated tab),
+    // the older connection is told to stand down instead of both silently acting as the same player.
+    const bind = (t) => {
+      const old = sockets.get(t);
+      if (old && old !== socket) old.emit('closed', { reason: 'other-tab' });
+      token = t;
+      sockets.set(t, socket);
+    };
 
     /** Wraps a handler: payload must be a plain object, RoomError becomes an ack, nothing throws into the socket. */
     const on = (event, handler) => socket.on(event, (payload, ack) => {
@@ -114,6 +121,7 @@ export function startServer({ port = Number(process.env.PORT) || 3000, tickMs = 
       if (t - windowStart > 1000) { windowStart = t; count = 0; }
       if (++count > ACT_LIMIT_PER_SECOND) return fail('rate', 'slow down');
       if (typeof action.type !== 'string') return fail('invalid');
+      if (!token || sockets.get(token) !== socket) return fail('no-room', 'this seat is open in another tab');
       const r = rooms.act(token, action);
       if (r.error) return { ok: false, ...r.error };
       push(rooms.roomOf(token), r.events);

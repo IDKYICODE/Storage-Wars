@@ -7,7 +7,7 @@ const NAME_KEY = 'storage-wars-name';
 const MESSAGES = {
   'no-room': 'No room with that code. Check the letters and try again.',
   full: 'That room is full (7 players max).',
-  started: 'That game has already started.',
+  started: 'That game has already started. To get back into your own seat, join with the exact name you used before.',
   'bad-name': 'Pick a name of 1 to 16 characters that nobody in the room has taken.',
   rate: 'Slow down a little, then try again.',
   invalid: 'Something looked wrong with that. Try again.',
