@@ -10,19 +10,16 @@ const BOX = '<svg class="ibox" viewBox="0 0 24 24" aria-hidden="true"><path d="M
 const GAVEL = '<svg class="gavel" viewBox="0 0 24 24" aria-label="Auctioneer"><path d="M4 20l8-8" stroke="#1d1a2b" stroke-width="3.4" stroke-linecap="round"/><rect x="9" y="3" width="10" height="6" rx="1.5" transform="rotate(45 14 6)" fill="#ffd23f" stroke="#1d1a2b" stroke-width="2"/></svg>';
 
 export function headline(view) {
-  const A = nameOf(view, view.auctioneerId);
-  const auto = view.mode === 'auto' || view.roundAuto;
   switch (view.phase) {
     case 'flip':
-      if (view.can.flip) return 'Flip a crate, or peek at one';
-      return auto ? 'The computer is flipping a crate' : `${A} is choosing a crate to flip`;
+      return 'The Auctioneer is flipping a crate';
     case 'buyin': {
       if (view.can.pass) return `Buy in for ${formatMoney(view.config.buyIn)}, or pass?`;
       const waiting = view.players.filter((p) => p.buyIn === 'pending').length;
       return waiting ? `Waiting for ${waiting} ${waiting === 1 ? 'player' : 'players'} to decide…` : 'Buy-in is closing…';
     }
     case 'peekwin':
-      return 'Peek window: buyers may look at one crate';
+      return 'Peek window: bidders may look at one crate';
     case 'bidding':
       return view.bid ? `${nameOf(view, view.bid.bidderId)} leads at ${formatMoney(view.bid.amount)}` : 'Bidding is open: opening bid $100';
     case 'payment':
@@ -35,18 +32,15 @@ export function headline(view) {
 }
 
 export function renderTopbar(view) {
-  const auto = view.mode === 'auto' || view.roundAuto;
-  const badge = `<span class="badge ${auto ? 'auto' : 'manual'}">${auto ? 'AUTO' : 'MANUAL'}</span>`;
   const clock = view.deadline ? `<span class="clock" data-at="${view.deadline.at}" data-kind="${esc(view.deadline.kind)}"></span>` : '';
   return `<header class="topbar"><div class="tl"><span class="round">Round ${view.roundNo} of ${view.totalRounds}</span>`
-    + `<span class="auct">${GAVEL}<span>${nameOf(view, view.auctioneerId)}</span>${badge}</span></div>`
+    + `<span class="auct">${GAVEL}<span>AUCTIONEER</span><span class="badge auto">AUTO</span></span></div>`
     + `<div class="headline" role="status">${headline(view)}${clock}</div></header>`;
 }
 
 export function renderPlayers(view) {
   const chips = view.players.map((p) => {
     const cls = ['chip'];
-    if (p.isAuctioneer) cls.push('auct');
     if (p.buyIn === 'pending') cls.push('turn');
     if (view.bid?.bidderId === p.id) cls.push('lead');
     if (p.eliminated) cls.push('out');
@@ -56,7 +50,7 @@ export function renderPlayers(view) {
       : p.buyIn === 'in' ? '<span class="stat s-in">IN</span>'
         : p.buyIn === 'pass' ? '<span class="stat s-pass">PASS</span>'
           : p.buyIn === 'pending' ? '<span class="stat s-wait">…</span>' : '';
-    return `<div class="${cls.join(' ')}">${p.isAuctioneer ? GAVEL : ''}<span class="cn">${esc(p.name)}</span>`
+    return `<div class="${cls.join(' ')}"><span class="cn">${esc(p.name)}</span>`
       + `<span class="cc">${formatMoney(p.cash)}</span><span class="ci">${BOX}${p.itemCount}</span>${status}</div>`;
   });
   return `<div class="players">${chips.join('')}</div>`;
@@ -70,7 +64,7 @@ function crateLabel(slot) {
 }
 
 export function renderStage(view, ui = {}) {
-  const pickable = (ui.pick === 'flip' && view.can.flip) || (ui.pick === 'peek' && view.can.peek);
+  const pickable = ui.pick === 'peek' && view.can.peek;
   const crates = view.slots.map((slot) => {
     const tap = pickable && !slot.faceUp && !slot.peeked;
     const label = crateLabel(slot);
@@ -139,10 +133,6 @@ function renderBidControls(view, ui) {
   } else {
     parts.push('<p class="hint">You are watching this auction.</p>');
   }
-  if (can.call) {
-    const label = !view.bid ? 'OPEN BIDDING' : CALL_LABEL[view.call];
-    parts.push(`<button class="btn warn big" data-act="call">${label}</button>`);
-  }
   return parts.join('');
 }
 
@@ -154,17 +144,14 @@ export function renderActions(view, ui = {}) {
   }
   if (view.phase === 'bidding') parts.push(renderBidControls(view, ui));
   if (view.phase === 'payment') parts.push(renderPayment(view, ui));
-  if (can.flip) parts.push(`<button class="btn warn${ui.pick === 'flip' ? ' on' : ''}" data-pick="flip">FLIP A CRATE</button>`);
   if (can.peek) parts.push(`<button class="btn${ui.pick === 'peek' ? ' on' : ''}" data-pick="peek">PEEK AT A CRATE</button>`);
   if (can.pass) {
     parts.push(`<button class="btn go" data-act="buyin"${can.buyin ? '' : ' disabled'}>Buy in ${formatMoney(view.config.buyIn)}</button>`);
     parts.push('<button class="btn" data-act="pass">Pass</button>');
   }
   if (can.ready) parts.push('<button class="btn go" data-act="ready">Ready</button>');
-  const auctNote = view.you === view.auctioneerId && ['buyin', 'peekwin', 'bidding'].includes(view.phase)
-    ? '<p class="hint auctnote">You are the Auctioneer: you collect the buy-ins and can bid too. Your own buy-in and price go to the bank.</p>' : '';
   const hint = ui.pick ? `<p class="hint">Tap a crate to ${ui.pick}.</p>` : '';
-  return `<div class="actions">${auctNote}${hint}<div class="abtns">${parts.join('')}</div></div>`;
+  return `<div class="actions">${hint}<div class="abtns">${parts.join('')}</div></div>`;
 }
 
 /** The whole table. `ui` is local screen state: { pick: null | 'flip' | 'peek' }. */

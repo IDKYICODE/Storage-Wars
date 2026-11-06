@@ -7,12 +7,11 @@ import { UNITS } from '../shared/cards.js';
 const safe = (n, value = 500) => ({ id: `t-${n}`, tier: 'common', name: `Thing ${n}`, value });
 const havoc = { id: 't-havoc', tier: 'havoc', name: 'Black Mold', value: 0 };
 
-/** 4 players, p0 is the Auctioneer, a chosen unit and chosen face-down items. */
-function setup({ unit = 'jumbo', mode = 'manual', items, n = 4 } = {}) {
+/** 4 players, round 1, a chosen unit and chosen face-down items. */
+function setup({ unit = 'jumbo', items, n = 4 } = {}) {
   const players = Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `P${i}` }));
-  const s = createGame(players, mode, 1);
+  const s = createGame(players, 1);
   const { count, ...u } = UNITS[unit];
-  s.auctioneerId = 'p0';
   s.unit = u;
   s.slots = (items || Array.from({ length: u.items }, (_, i) => safe(i))).map((item) => ({ item, faceUp: false }));
   beginRoundPhase(s, 0);
@@ -21,43 +20,24 @@ function setup({ unit = 'jumbo', mode = 'manual', items, n = 4 } = {}) {
 const act = (s, type, by, extra = {}, now = 0) => reduce(s, { type, by, ...extra }, now);
 const code = (fn) => { try { fn(); } catch (e) { return e.code; } return null; };
 
-test('flip: only the Auctioneer may flip, index must be valid, a safe flip opens buy-in', () => {
+test('the game flips a random crate by itself after 2 s and opens buy-in; players cannot flip', () => {
   const s = setup({ unit: 'jumbo' });
   assert.equal(s.phase, 'flip');
-  assert.equal(code(() => act(s, 'flip', 'p1', { index: 0 })), 'not-allowed');
-  assert.equal(code(() => act(s, 'flip', 'p0', { index: 9 })), 'invalid');
-  assert.equal(code(() => act(s, 'flip', 'p0', { index: 1.5 })), 'invalid');
-  const { state, events } = act(s, 'flip', 'p0', { index: 2 });
-  assert.equal(state.slots[2].faceUp, true);
-  assert.equal(state.phase, 'buyin');
-  assert.deepEqual(state.deadline, { kind: 'buyin', at: 25000 });
-  assert.ok(events.some((e) => e.type === 'flipped' && e.index === 2));
-  assert.equal(code(() => act(state, 'flip', 'p0', { index: 3 })), 'wrong-phase');
+  assert.deepEqual(s.deadline, { kind: 'auto-flip', at: 2000 });
+  assert.equal(code(() => act(s, 'flip', 'p0', { index: 0 })), 'invalid'); // there is no human flip action
+  const out = tick(s, 2000);
+  assert.equal(out.state.slots.filter((x) => x.faceUp).length, 1);
+  assert.equal(out.state.phase, 'buyin');
+  assert.deepEqual(out.state.deadline, { kind: 'buyin', at: 27000 });
+  assert.ok(out.events.some((e) => e.type === 'flipped'));
 });
 
-test('flipping a Havoc voids the unit, ends the round and credits the Auctioneer turn', () => {
-  const s = setup({ unit: 'large', items: [safe(0), havoc, safe(2), safe(3)] });
-  const { state, events } = act(s, 'flip', 'p0', { index: 1 });
+test('an automatic flip that finds Havoc voids the unit and moves to the next round', () => {
+  const s = setup({ unit: 'large', items: [havoc, havoc, havoc, havoc] });
+  const { state, events } = tick(s, 2000);
   assert.ok(events.some((e) => e.type === 'voided'));
   assert.ok(events.some((e) => e.type === 'round-end'));
-  assert.equal(state.players.p0.turnsPlayed, 1);
-  assert.equal(state.auctioneerId, 'p1');
   assert.equal(state.roundNo, 2);
-});
-
-test('auto mode flips by itself and humans cannot flip; manual idle hands the round to auto', () => {
-  const a = setup({ unit: 'jumbo', mode: 'auto' });
-  assert.deepEqual(a.deadline, { kind: 'auto-flip', at: 2000 });
-  assert.equal(code(() => act(a, 'flip', 'p0', { index: 0 })), 'not-allowed');
-  const flippedAuto = tick(a, 2000).state;
-  assert.equal(flippedAuto.slots.filter((x) => x.faceUp).length, 1);
-
-  const m = setup({ unit: 'jumbo', mode: 'manual' });
-  assert.deepEqual(m.deadline, { kind: 'flip-idle', at: 45000 });
-  const out = tick(m, 45000);
-  assert.equal(out.state.roundAuto, true);
-  assert.ok(out.events.some((e) => e.type === 'auto-takeover'));
-  assert.equal(out.state.slots.filter((x) => x.faceUp).length, 1);
 });
 
 test('a peek is private and allowed once; the Auctioneer follows the same peek rules as everyone', () => {
@@ -90,8 +70,9 @@ test('player peek rules follow the unit: never / before / after buy-in', () => {
 
 test('peeking a face-up crate or an out-of-range crate is invalid', () => {
   const s = setup({ unit: 'jumbo' });
-  const flipped = act(s, 'flip', 'p0', { index: 0 }).state;
-  assert.equal(code(() => act(flipped, 'peek', 'p1', { index: 0 })), 'invalid');
+  const flipped = tick(s, 2000).state;
+  const up = flipped.slots.findIndex((x) => x.faceUp);
+  assert.equal(code(() => act(flipped, 'peek', 'p1', { index: up })), 'invalid');
   assert.equal(code(() => act(flipped, 'peek', 'p1', { index: 7 })), 'invalid');
 });
 
@@ -106,10 +87,10 @@ test('buy-in is simultaneous: every player can decide at once, in any order', ()
   assert.equal(s.phase, 'buyin'); // the Auctioneer decides too
   s = act(s, 'pass', 'p0').state;
   assert.equal(s.phase, 'bidding'); // all decided: bidding opens at once
-  assert.equal(s.players.p0.cash, 5300); // three buy-ins of $100 to the Auctioneer
+  assert.equal(s.bank, 300); // the three buy-ins of $100 go to the bank
 });
 
-test('the Auctioneer can buy in and bid like everyone else; their own fee goes to the bank, not to themselves', () => {
+test('every player can buy in and then bid; the fee goes to the bank', () => {
   let s = setup({ unit: 'locker' });
   s = act(s, 'buyin', 'p0').state;
   assert.equal(s.players.p0.cash, 4900);
@@ -123,7 +104,7 @@ test('buy-in: cash only, the configured fee, no double clicks', () => {
   const s = setup({ unit: 'locker' });
   const { state } = act(s, 'buyin', 'p1');
   assert.equal(state.players.p1.cash, 4900);
-  assert.equal(state.players.p0.cash, 5100);
+  assert.equal(state.bank, 100);
   assert.equal(state.buyIns.p1, 'in');
   assert.equal(code(() => act(state, 'buyin', 'p1')), 'not-allowed'); // already decided
   assert.equal(code(() => act(state, 'pass', 'p1')), 'not-allowed');
@@ -136,7 +117,7 @@ test('buy-in: cash only, the configured fee, no double clicks', () => {
   pricey.config.buyIn = 500;
   const paid = act(pricey, 'buyin', 'p2').state;
   assert.equal(paid.players.p2.cash, 4500);
-  assert.equal(paid.players.p0.cash, 5500);
+  assert.equal(paid.bank, 500);
 });
 
 test('the shared buy-in clock passes for everyone who has not decided', () => {
@@ -156,8 +137,6 @@ test('the shared buy-in clock passes for everyone who has not decided', () => {
 test('everyone passes: unit discarded, round over, no money moves', () => {
   let s = setup({ unit: 'locker' });
   for (const id of ['p0', 'p1', 'p2', 'p3']) s = act(s, 'pass', id).state;
-  assert.equal(s.players.p0.turnsPlayed, 1);
-  assert.equal(s.auctioneerId, 'p1');
   assert.equal(s.roundNo, 2);
   assert.ok(Object.values(s.players).every((p) => p.cash === 5000));
 });

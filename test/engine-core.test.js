@@ -16,7 +16,7 @@ registerHandler('test-touch', (s, action, now, events) => {
 });
 
 test('reduce never mutates its input and returns the events', () => {
-  const s = deepFreeze(createGame(players, 'manual', 1));
+  const s = deepFreeze(createGame(players, 1));
   const out = reduce(s, { type: 'test-touch', by: 'a' }, 0);
   assert.equal(s.roundNo, 1);
   assert.equal(out.state.roundNo, 99);
@@ -24,12 +24,12 @@ test('reduce never mutates its input and returns the events', () => {
 });
 
 test('unknown action type throws ActionError invalid', () => {
-  const s = createGame(players, 'manual', 1);
+  const s = createGame(players, 1);
   assert.throws(() => reduce(s, { type: 'nope', by: 'a' }, 0), (e) => e instanceof ActionError && e.code === 'invalid');
 });
 
 test('unknown or eliminated actor throws not-allowed', () => {
-  const s = createGame(players, 'manual', 1);
+  const s = createGame(players, 1);
   assert.throws(() => reduce(s, { type: 'test-touch', by: 'zzz' }, 0), (e) => e.code === 'not-allowed');
   s.players.b.eliminated = true;
   assert.throws(() => reduce(s, { type: 'test-touch', by: 'b' }, 0), (e) => e.code === 'not-allowed');
@@ -41,7 +41,7 @@ test('tick does nothing before the deadline and fires the timeout exactly once a
     calls++;
     events.push({ type: 'timed-out', now });
   });
-  const s = createGame(players, 'manual', 1);
+  const s = createGame(players, 1);
   s.deadline = { kind: 'test-kind', at: 1000 };
 
   const early = tick(s, 999);
@@ -62,7 +62,7 @@ test('tick does nothing before the deadline and fires the timeout exactly once a
 
 test('a timeout handler may set a new deadline', () => {
   registerTimeout('test-rearm', (s, now) => { s.deadline = { kind: 'test-rearm', at: now + 10 }; });
-  const s = createGame(players, 'manual', 1);
+  const s = createGame(players, 1);
   s.deadline = { kind: 'test-rearm', at: 100 };
   assert.deepEqual(tick(s, 100).state.deadline, { kind: 'test-rearm', at: 110 });
 });

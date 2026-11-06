@@ -5,8 +5,7 @@ import { renderLobby } from '../client/js/screens/lobby.js';
 const mk = (n, extra = {}) => ({
   code: 'KQTZ',
   hostId: 'p0',
-  mode: 'manual',
-  settings: { turns: 2, startCash: 5000, buyIn: 100 },
+  settings: { rounds: 8, startCash: 5000, buyIn: 100 },
   you: 'p0',
   players: Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `Player${i}`, connected: true })),
   ...extra,
@@ -19,30 +18,23 @@ test('the host sees START, disabled below 3 players and enabled from 3 to 7', ()
   assert.doesNotMatch(startBtn(renderLobby(mk(7))), /disabled/);
 });
 
-test('a non-host has no START, no kick buttons, and a read-only mode', () => {
+test('a non-host has no START and no kick buttons', () => {
   const html = renderLobby(mk(4, { you: 'p2' }));
   assert.equal(startBtn(html), null);
   assert.ok(html.includes('Waiting for the host'));
   assert.ok(!html.includes('data-act="kick"'));
-  assert.ok(!html.includes('data-act="mode"'));
-  assert.match(html, /class="seg on"[^>]*disabled[^>]*>MANUAL/); // still shown, just not editable
 });
 
-test('the host can kick everyone except themselves and can switch the mode', () => {
+test('the host can kick everyone except themselves', () => {
   const html = renderLobby(mk(4));
   assert.equal((html.match(/data-act="kick"/g) || []).length, 3);
   assert.ok(!html.includes('data-kick="p0"'));
-  assert.equal((html.match(/data-act="mode"/g) || []).length, 2);
-  assert.match(html, /data-act="mode" data-mode="auto"/);
 });
 
-test('the active mode is marked and each mode explains itself', () => {
-  const manual = renderLobby(mk(3));
-  assert.match(manual, /class="seg on"[^>]*data-mode="manual"/);
-  const auto = renderLobby(mk(3, { mode: 'auto' }));
-  assert.match(auto, /class="seg on"[^>]*data-mode="auto"/);
-  assert.match(auto, /computer/i);
-  assert.match(manual, /real player/i);
+test('there is no Auctioneer or mode choice: the game runs the auction itself', () => {
+  const html = renderLobby(mk(3));
+  assert.ok(!html.includes('data-act="mode"') && !/MANUAL/.test(html));
+  assert.ok(html.includes('Everyone bids on every unit'));
 });
 
 test('the room code, the share link and the player count are shown', () => {
@@ -71,19 +63,17 @@ test('you are marked as "you" in the list, and everyone gets a Leave button', ()
 
 const setBtn = (html, key, value) => html.match(new RegExp(`<button[^>]*data-key="${key}"[^>]*data-value="${value}"[^>]*>`))?.[0] ?? null;
 
-test('rounds each has quick picks and a stepper with no upper cap beyond 99, and the total is spelled out', () => {
+test('rounds: quick picks plus a stepper from 1 to 99, with the count spelled out', () => {
   const html = renderLobby(mk(4));
-  for (const t of [1, 2, 3, 5, 10]) assert.ok(setBtn(html, 'turns', t), `quick pick ${t}`);
-  assert.match(setBtn(html, 'turns', 2), /class="seg on"/);
-  assert.ok(setBtn(html, 'turns', 1) && setBtn(html, 'turns', 3)); // stepper - / +
-  assert.ok(html.includes('8 rounds in total'));
-  const many = renderLobby(mk(7, { settings: { turns: 20, startCash: 5000, buyIn: 100 } }));
-  assert.ok(many.includes('140 rounds in total'));
-  assert.ok(setBtn(many, 'turns', 21) && setBtn(many, 'turns', 19));
-  const top = renderLobby(mk(3, { settings: { turns: 99, startCash: 5000, buyIn: 100 } }));
-  assert.match(setBtn(top, 'turns', 100), /disabled/);
-  const bottom = renderLobby(mk(3, { settings: { turns: 1, startCash: 5000, buyIn: 100 } }));
-  assert.match(setBtn(bottom, 'turns', 0), /disabled/);
+  for (const t of [4, 8, 12, 16, 20]) assert.ok(setBtn(html, 'rounds', t), `quick pick ${t}`);
+  assert.match(setBtn(html, 'rounds', 8), /class="seg on"/);
+  assert.ok(setBtn(html, 'rounds', 7) && setBtn(html, 'rounds', 9)); // stepper - / +
+  assert.ok(html.includes('8 storage units go up for auction'));
+  const one = renderLobby(mk(4, { settings: { rounds: 1, startCash: 5000, buyIn: 100 } }));
+  assert.ok(one.includes('1 storage unit goes up'));
+  assert.match(setBtn(one, 'rounds', 0), /disabled/);
+  const top = renderLobby(mk(4, { settings: { rounds: 99, startCash: 5000, buyIn: 100 } }));
+  assert.match(setBtn(top, 'rounds', 100), /disabled/);
 });
 
 test('starting cash and buy-in are steppers that stop at their limits', () => {
@@ -92,7 +82,7 @@ test('starting cash and buy-in are steppers that stop at their limits', () => {
   assert.ok(setBtn(html, 'startCash', 4000) && setBtn(html, 'startCash', 6000));
   assert.ok(setBtn(html, 'buyIn', 200));
   assert.match(setBtn(html, 'buyIn', 0), /disabled/); // already at the $100 minimum, nothing below
-  const top = renderLobby(mk(3, { settings: { turns: 2, startCash: 20000, buyIn: 1000 } }));
+  const top = renderLobby(mk(3, { settings: { rounds: 8, startCash: 20000, buyIn: 1000 } }));
   assert.match(setBtn(top, 'startCash', 21000), /disabled/);
   assert.match(setBtn(top, 'buyIn', 1100), /disabled/);
 });
@@ -100,14 +90,5 @@ test('starting cash and buy-in are steppers that stop at their limits', () => {
 test('a non-host sees the settings but cannot change them', () => {
   const html = renderLobby(mk(4, { you: 'p2' }));
   assert.ok(!html.includes('data-act="set"'));
-  assert.ok(html.includes('$5,000') && html.includes('8 rounds in total'));
-});
-
-test('below 3 players the total line talks about turns, in both modes (in Auto the computer runs the auction)', () => {
-  for (const mode of ['manual', 'auto']) {
-    const html = renderLobby(mk(1, { mode, settings: { turns: 5, startCash: 5000, buyIn: 100 } }));
-    assert.ok(html.includes('Each player gets 5 turns'), mode);
-    assert.ok(!/runs 5 auctions/.test(html), mode);
-  }
-  assert.ok(renderLobby(mk(2, { settings: { turns: 1, startCash: 5000, buyIn: 100 } })).includes('Each player gets 1 turn'));
+  assert.ok(html.includes('$5,000') && html.includes('8 storage units'));
 });

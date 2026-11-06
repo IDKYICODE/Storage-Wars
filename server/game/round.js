@@ -1,6 +1,6 @@
 import { ActionError, registerHandler, registerTimeout } from './registry.js';
 import { rand } from './rng.js';
-import { TIMERS, endRound, openBuyIn, undecidedBuyers, isAuto } from './state.js';
+import { TIMERS, endRound, openBuyIn, undecidedBuyers } from './state.js';
 import { enterBidding } from './bidding.js';
 
 const need = (ok, code, msg) => { if (!ok) throw new ActionError(code, msg); };
@@ -46,13 +46,6 @@ function afterBuyInDecision(state, now, events) {
   }
 }
 
-registerHandler('flip', (state, action, now, events) => {
-  need(state.phase === 'flip', 'wrong-phase');
-  need(action.by === state.auctioneerId && !isAuto(state), 'not-allowed');
-  need(validIndex(state, action.index), 'invalid', 'bad crate');
-  doFlip(state, action.index, now, events);
-});
-
 registerHandler('peek', (state, action, now, events) => {
   const by = action.by;
   need(['buyin', 'peekwin'].includes(state.phase), 'wrong-phase');
@@ -80,8 +73,7 @@ function decide(state, by, choice, now, events, auto = false) {
     const fee = state.config.buyIn;
     need(state.players[by].cash >= fee, 'invalid', 'not enough cash');
     state.players[by].cash -= fee;
-    if (by !== state.auctioneerId) state.players[state.auctioneerId].cash += fee;
-    else state.bank += fee; // the Auctioneer's own fee goes to the bank
+    state.bank += fee; // the buy-in fee goes to the bank; the automatic Auctioneer keeps no cash
     state.buyIns[by] = 'in';
     events.push({ type: 'buyin', by });
   } else {
@@ -100,11 +92,6 @@ registerHandler('buyin', (state, action, now, events) => decide(state, action.by
 registerHandler('pass', (state, action, now, events) => decide(state, action.by, 'pass', now, events));
 
 registerTimeout('auto-flip', (state, now, events) => flipRandom(state, now, events));
-registerTimeout('flip-idle', (state, now, events) => {
-  state.roundAuto = true;
-  events.push({ type: 'auto-takeover' });
-  flipRandom(state, now, events);
-});
 registerTimeout('buyin', (state, now, events) => {
   for (const id of undecidedBuyers(state)) autoPass(state, id, now, events);
 });

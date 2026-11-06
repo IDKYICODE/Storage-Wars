@@ -87,7 +87,7 @@ export function mount(root, ctx) {
 
   const paint = (events = []) => {
     if (!view) return;
-    if (ui.pick && !(ui.pick === 'flip' ? view.can.flip : view.can.peek)) ui.pick = null;
+    if (ui.pick && !view.can.peek) ui.pick = null;
     if (!view.can.pay) ui.pay = null;
     else if (!ui.pay) ui.pay = defaultSelection(view); // start from the server's suggestion
     root.innerHTML = renderTable(view, ui);
@@ -131,7 +131,7 @@ export function mount(root, ctx) {
     const btn = e.target.closest('[data-act]');
     const act = btn?.dataset.act;
     if (act === 'pay' && ui.pay) send('pay', { cash: ui.pay.cash, itemIds: ui.pay.ids });
-    else if (act === 'buyin' || act === 'pass' || act === 'ready' || act === 'call') send(act);
+    else if (act === 'buyin' || act === 'pass' || act === 'ready') send(act);
     else if (act === 'bid') send('bid', { amount: Number(btn.dataset.amount) });
     else if (act === 'bidcustom') bidCustom();
   };

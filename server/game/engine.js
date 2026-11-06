@@ -2,7 +2,7 @@ import { ActionError, getHandler, getTimeout } from './registry.js';
 import { autoPass } from './round.js';
 import './bidding.js';
 import './payment.js';
-import { TIMERS, isAuto, undecidedBuyers } from './state.js';
+import { undecidedBuyers } from './state.js';
 
 export { ActionError } from './registry.js';
 export { createGame } from './state.js';
@@ -22,7 +22,6 @@ export function reduce(state, action, now) {
   return { state: next, events };
 }
 
-export const AUCTIONEER_OFFLINE_MS = 20000;
 export const OFFLINE_PASS_MS = 8000;
 
 /** Marks a player connected or offline (the server calls this on socket connect/disconnect). */
@@ -34,7 +33,7 @@ export function setPresence(state, playerId, connected, now) {
   return { state: next, events: [] };
 }
 
-/** Presence rules: an offline decider passes; a Manual Auctioneer offline too long is replaced by Auto. */
+/** Presence rules: a player who is offline and has not decided passes for themselves. */
 function presenceStep(state, now) {
   const events = [];
   let next = null;
@@ -51,16 +50,6 @@ function presenceStep(state, now) {
     }
   }
 
-  const cur = next ?? state;
-  const a = cur.players[cur.auctioneerId];
-  const needsAuctioneer = ['flip', 'bidding'].includes(cur.phase);
-  if (needsAuctioneer && !isAuto(cur) && !a.connected && a.offlineSince !== null && now - a.offlineSince > AUCTIONEER_OFFLINE_MS) {
-    const s = edit();
-    s.roundAuto = true;
-    events.push({ type: 'auto-takeover' });
-    if (s.phase === 'flip') s.deadline = { kind: 'auto-flip', at: now + TIMERS.autoFlip };
-    else s.deadline = s.bid ? { kind: 'call', at: now + TIMERS.callStage } : { kind: 'opening', at: now + TIMERS.opening };
-  }
   return { state: next ?? state, events };
 }
 

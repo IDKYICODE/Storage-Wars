@@ -1,4 +1,4 @@
-import { isAuto, undecidedBuyers } from './state.js';
+import { undecidedBuyers } from './state.js';
 import { bidders } from './bidding.js';
 import { suggestPayment, assets } from './payment.js';
 
@@ -8,7 +8,6 @@ import { suggestPayment, assets } from './payment.js';
  */
 export function viewFor(state, me) {
   const mine = state.players[me];
-  const isAuctioneer = me === state.auctioneerId;
   const winnerId = state.winner?.playerId ?? null;
   const over = state.phase === 'gameover';
 
@@ -28,7 +27,7 @@ export function viewFor(state, me) {
     if (state.phase === 'buyin' && !p.eliminated && buyIn === null) buyIn = 'pending';
     return {
       id, name: p.name, cash: p.cash, itemCount: p.items.length, eliminated: p.eliminated,
-      connected: p.connected, isAuctioneer: id === state.auctioneerId, turnsPlayed: p.turnsPlayed,
+      connected: p.connected,
       buyIn, peeked: (state.peeks[id] || []).length > 0, failed: state.excluded.includes(id),
     };
   });
@@ -43,7 +42,6 @@ export function viewFor(state, me) {
   }
   const myTurnToDecide = state.phase === 'buyin' && undecidedBuyers(state).includes(me);
   const can = {
-    flip: alive && state.phase === 'flip' && isAuctioneer && !isAuto(state),
     peek: canPeek,
     ready: alive && state.phase === 'peekwin' && state.buyIns[me] === 'in' && !state.ready.includes(me) && !hasPeeked,
     buyin: alive && myTurnToDecide && mine.cash >= state.config.buyIn,
@@ -51,7 +49,6 @@ export function viewFor(state, me) {
     // you can bid only while you can pay a higher bid than the current one
     bid: alive && state.phase === 'bidding' && bidders(state).includes(me) && state.bid?.bidderId !== me
       && assets(mine) >= (state.bid?.amount ?? 0) + 100,
-    call: alive && state.phase === 'bidding' && isAuctioneer && !isAuto(state),
     pay: alive && state.phase === 'payment' && winnerId === me,
   };
 
@@ -59,11 +56,8 @@ export function viewFor(state, me) {
     you: me,
     phase: state.phase,
     roundNo: state.roundNo,
-    totalRounds: state.config.turns * state.order.length,
+    totalRounds: state.config.rounds,
     config: state.config,
-    mode: state.mode,
-    roundAuto: state.roundAuto,
-    auctioneerId: state.auctioneerId,
     unit: state.unit,
     slots,
     players,

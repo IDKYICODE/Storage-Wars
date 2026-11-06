@@ -8,12 +8,11 @@ const mk = () => { clock = 1_000_000; return new Rooms({ now: () => clock }); };
 const code = (fn) => { try { fn(); } catch (e) { return e instanceof RoomError ? e.code : `other:${e.message}`; } return null; };
 
 /** A started 3-player room: returns everything a test needs. */
-function started(mode = 'auto') {
+function started() {
   const rooms = mk();
   const a = rooms.create('Ayush');
   const b = rooms.join(a.room.code, 'Bea');
   const c = rooms.join(a.room.code, 'Cal');
-  rooms.setMode(a.token, mode);
   rooms.start(a.token);
   return { rooms, room: a.room, a, b, c };
 }
@@ -98,28 +97,22 @@ test('start needs the host and 3 to 7 players', () => {
   assert.equal(code(() => rooms.start(b.token)), 'not-host');
   rooms.start(a.token);
   assert.ok(a.room.game);
-  assert.equal(a.room.game.mode, 'manual');
   assert.equal(code(() => rooms.start(a.token)), 'started');
   assert.ok(c.player.id);
 });
 
-test('kick and mode: host only, lobby only', () => {
+test('kick: host only, lobby only', () => {
   const rooms = mk();
   const a = rooms.create('Ayush');
   const b = rooms.join(a.room.code, 'Bea');
   const c = rooms.join(a.room.code, 'Cal');
   assert.equal(code(() => rooms.kick(b.token, c.player.id)), 'not-host');
-  assert.equal(code(() => rooms.setMode(b.token, 'auto')), 'not-host');
-  assert.equal(code(() => rooms.setMode(a.token, 'weird')), 'bad-mode');
-  rooms.setMode(a.token, 'auto');
-  assert.equal(a.room.mode, 'auto');
   rooms.kick(a.token, c.player.id);
   assert.deepEqual(a.room.players.map((p) => p.name), ['Ayush', 'Bea']);
   assert.equal(rooms.rejoin(c.token), null); // kicked token is dead
   rooms.join(a.room.code, 'Dee');
   rooms.start(a.token);
   assert.equal(code(() => rooms.kick(a.token, b.player.id)), 'started');
-  assert.equal(code(() => rooms.setMode(a.token, 'manual')), 'started');
 });
 
 test('settings: host only, lobby only, validated, and they reach the game', () => {
@@ -127,29 +120,29 @@ test('settings: host only, lobby only, validated, and they reach the game', () =
   const a = rooms.create('Ayush');
   const b = rooms.join(a.room.code, 'Bea');
   rooms.join(a.room.code, 'Cal');
-  assert.deepEqual(rooms.snapshot(a.room, a.player.id).lobby.settings, { turns: 2, startCash: 5000, buyIn: 100 });
-  assert.equal(code(() => rooms.setSettings(b.token, { turns: 1 })), 'not-host');
-  for (const bad of [{ turns: 0 }, { turns: 100 }, { turns: 1.5 }, { startCash: 500 }, { startCash: 25000 }, { startCash: 1500 },
-    { buyIn: 0 }, { buyIn: 1100 }, { buyIn: 150 }, { nope: 1 }, { turns: '2' }, null]) {
+  assert.deepEqual(rooms.snapshot(a.room, a.player.id).lobby.settings, { rounds: 8, startCash: 5000, buyIn: 100 });
+  assert.equal(code(() => rooms.setSettings(b.token, { rounds: 1 })), 'not-host');
+  for (const bad of [{ rounds: 0 }, { rounds: 100 }, { rounds: 1.5 }, { startCash: 500 }, { startCash: 25000 }, { startCash: 1500 },
+    { buyIn: 0 }, { buyIn: 1100 }, { buyIn: 150 }, { nope: 1 }, { rounds: '2' }, null]) {
     assert.equal(code(() => rooms.setSettings(a.token, bad)), 'bad-setting', JSON.stringify(bad));
   }
-  assert.deepEqual(a.room.settings, { turns: 2, startCash: 5000, buyIn: 100 }); // nothing half-applied
-  rooms.setSettings(a.token, { turns: 3, startCash: 8000, buyIn: 300 });
+  assert.deepEqual(a.room.settings, { rounds: 8, startCash: 5000, buyIn: 100 }); // nothing half-applied
+  rooms.setSettings(a.token, { rounds: 3, startCash: 8000, buyIn: 300 });
   rooms.start(a.token);
-  assert.deepEqual(a.room.game.config, { turns: 3, startCash: 8000, buyIn: 300 });
+  assert.deepEqual(a.room.game.config, { rounds: 3, startCash: 8000, buyIn: 300 });
   assert.equal(a.room.game.players[b.player.id].cash, 8000);
-  assert.equal(code(() => rooms.setSettings(a.token, { turns: 1 })), 'started');
+  assert.equal(code(() => rooms.setSettings(a.token, { rounds: 1 })), 'started');
 });
 
-test('rounds each: any number from 1 to 99, no matter how many players', () => {
+test('rounds: any number from 1 to 99, no matter how many players', () => {
   const rooms = mk();
   const a = rooms.create('Ayush');
   for (const n of ['Bea', 'Cal', 'Dee', 'Eve', 'Fay', 'Gus']) rooms.join(a.room.code, n);
-  rooms.setSettings(a.token, { turns: 25 });
+  rooms.setSettings(a.token, { rounds: 25 });
   rooms.start(a.token);
-  assert.equal(a.room.game.config.turns, 25);
+  assert.equal(a.room.game.config.rounds, 25);
   const solo = mk();
-  assert.equal(code(() => solo.setSettings(solo.create('X').token, { turns: 99 })), null);
+  assert.equal(code(() => solo.setSettings(solo.create('X').token, { rounds: 99 })), null);
 });
 
 test('leaving the lobby frees the seat and passes the host crown; an empty room is deleted', () => {
@@ -190,11 +183,10 @@ test('host offline 29 s keeps the crown, 31 s passes it to the next connected se
 });
 
 test('act ignores any claimed actor and turns illegal actions into an error result', () => {
-  const { rooms, room, a, b } = started('manual');
+  const { rooms, room, a, b } = started();
   const g = room.game;
   const decider = b.player.id;
   g.phase = 'buyin';
-  g.auctioneerId = a.player.id;
   g.buyIns = {};
   g.deadline = { kind: 'buyin', at: clock + 25_000 };
   // Ayush pretends to be Bea: the action is applied to Ayush himself, never to Bea
@@ -214,10 +206,9 @@ test('act before the game starts reports no-game; tick drives timers and returns
   const rooms = mk();
   const a = rooms.create('Ayush');
   assert.equal(rooms.act(a.token, { type: 'pass' }).error.code, 'no-game');
-  const s = started('auto');
+  const s = started();
   s.room.game.phase = 'buyin';
   s.room.game.buyIns = {};
-  s.room.game.auctioneerId = s.a.player.id;
   s.room.game.deadline = { kind: 'buyin', at: clock + 100 };
   const changed = s.rooms.tick(clock + 200);
   assert.equal(changed.length, 1);

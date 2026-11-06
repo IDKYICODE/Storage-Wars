@@ -2,21 +2,15 @@ import { esc, formatMoney } from '../art/kit.js';
 
 const CROWN = '<svg class="crown" viewBox="0 0 24 24" aria-label="host"><path d="M3 18l-1-11 6 5 4-8 4 8 6-5-1 11z" fill="#ffd23f" stroke="#1d1a2b" stroke-width="2" stroke-linejoin="round"/></svg>';
 
-const MODES = {
-  manual: { label: 'MANUAL', text: 'A real player runs each auction: picks the flip, then calls going once, going twice, SOLD.' },
-  auto: { label: 'AUTO', text: "The computer runs each auction for whoever's turn it is. They still collect the money." },
-};
+const STEPS = { rounds: [1, 99, 1], startCash: [1000, 20000, 1000], buyIn: [100, 1000, 100] };
+const QUICK_ROUNDS = [4, 8, 12, 16, 20];
 
-const STEPS = { turns: [1, 99, 1], startCash: [1000, 20000, 1000], buyIn: [100, 1000, 100] };
-const QUICK_TURNS = [1, 2, 3, 5, 10];
-
-/** The game-rules panel: turns each (quick picks plus a stepper), starting cash and buy-in fee. Read-only for non-hosts. */
+/** The game-rules panel: number of rounds (quick picks plus a stepper), starting cash and buy-in fee. Read-only for non-hosts. */
 function renderSettings(lobby, isHost) {
-  const { turns } = lobby.settings;
-  const n = lobby.players.length;
-  const quick = QUICK_TURNS.map((t) => (isHost
-    ? `<button class="seg${turns === t ? ' on' : ''}" data-act="set" data-key="turns" data-value="${t}" aria-pressed="${turns === t}">${t}</button>`
-    : `<span class="seg${turns === t ? ' on' : ''}">${t}</span>`)).join('');
+  const { rounds } = lobby.settings;
+  const quick = QUICK_ROUNDS.map((t) => (isHost
+    ? `<button class="seg${rounds === t ? ' on' : ''}" data-act="set" data-key="rounds" data-value="${t}" aria-pressed="${rounds === t}">${t}</button>`
+    : `<span class="seg${rounds === t ? ' on' : ''}">${t}</span>`)).join('');
   const stepper = (key, label, show) => {
     const [min, max, step] = STEPS[key];
     const value = lobby.settings[key];
@@ -29,12 +23,12 @@ function renderSettings(lobby, isHost) {
   };
   return `<div class="section"><h2 class="display">GAME RULES</h2>`
     + `${isHost ? `<div class="segs quick">${quick}</div>` : ''}`
-    + `${stepper('turns', 'Turns each', String)}`
-    + `<p class="modetext">${n < 3 ? `Each player gets ${turns} ${turns === 1 ? 'turn' : 'turns'}` : `${turns * n} rounds in total`}</p>`
+    + `${stepper('rounds', 'Rounds', String)}`
+    + `<p class="modetext">${rounds} ${rounds === 1 ? 'storage unit goes' : 'storage units go'} up for auction, one at a time. Everyone bids on every unit.</p>`
     + `${stepper('startCash', 'Starting cash', formatMoney)}${stepper('buyIn', 'Buy-in fee', formatMoney)}</div>`;
 }
 
-/** Pure markup for the room lobby. `lobby` is the server's lobby message ({code, hostId, mode, players, you}). */
+/** Pure markup for the room lobby. `lobby` is the server's lobby message ({code, hostId, settings, players, you}). */
 export function renderLobby(lobby) {
   const isHost = lobby.you === lobby.hostId;
   const n = lobby.players.length;
@@ -48,7 +42,6 @@ export function renderLobby(lobby) {
     + `${isHost && p.id !== lobby.you ? `<button class="btn small bad" data-act="kick" data-kick="${esc(p.id)}">KICK</button>` : ''}`
     + '</li>').join('');
 
-  const seg = (m) => `<button class="seg${lobby.mode === m ? ' on' : ''}" ${isHost ? `data-act="mode" data-mode="${m}"` : 'disabled'} aria-pressed="${lobby.mode === m}">${MODES[m].label}</button>`;
   const startArea = isHost
     ? `<button class="btn go big" data-act="start"${canStart ? '' : ' disabled'}>START GAME</button>${canStart ? '' : '<p class="hint">You need 3 to 7 players to start.</p>'}`
     : '<p class="hint wait">Waiting for the host to start…</p>';
@@ -57,8 +50,6 @@ export function renderLobby(lobby) {
     + `<div class="lobby-card"><div class="clip"><i></i></div><div class="paper">`
     + `<button class="btn small" data-act="copy">COPY INVITE LINK</button>`
     + `<div class="section"><h2 class="display">PLAYERS <span class="count">${n} / 7</span></h2><ul class="plist">${rows}</ul></div>`
-    + `<div class="section"><h2 class="display">AUCTIONEER</h2><div class="segs">${seg('manual')}${seg('auto')}</div>`
-    + `<p class="modetext">${esc(MODES[lobby.mode].text)}</p></div>`
     + `${renderSettings(lobby, isHost)}`
     + `${startArea}<p class="toast-line" role="status"></p>`
     + `<button class="link" data-act="leave">Leave room</button></div></div></div>`;
@@ -90,8 +81,6 @@ export function mount(root, ctx) {
       const link = `${window.location.origin}/?room=${lobby.code}`;
       try { await navigator.clipboard.writeText(link); toast('Invite link copied. Send it to your friends.'); }
       catch { toast(link); }
-    } else if (act === 'mode') {
-      await net.setMode(btn.dataset.mode);
     } else if (act === 'set') {
       const res = await net.setSettings({ [btn.dataset.key]: Number(btn.dataset.value) });
       if (!res?.ok) toast(TOASTS[res?.code] ?? 'Could not change that setting.');

@@ -11,15 +11,15 @@ const card = (name) => renderFlipCard(item(name), true);
 const still = (html) => html.replace(/ (?:data-act|data-item|id)="[^"]*"/g, '');
 
 const player = (id, name, cash, itemCount, extra = {}) => ({
-  id, name, cash, itemCount, buyIn: null, isAuctioneer: false, eliminated: false, connected: true, ...extra,
+  id, name, cash, itemCount, buyIn: null, eliminated: false, connected: true, ...extra,
 });
 const PLAYERS = [
-  player('a', 'MAYA', 5600, 1, { isAuctioneer: true }),
+  player('a', 'MAYA', 5600, 1),
   player('me', 'YOU', 4200, 2),
   player('c', 'RAJ', 3900, 3),
   player('d', 'TESS', 5000, 0),
 ];
-const view = (extra = {}) => ({ you: 'me', auctioneerId: 'a', players: PLAYERS, myItems: [], bid: null, ...extra });
+const view = (extra = {}) => ({ you: 'me', players: PLAYERS, myItems: [], bid: null, ...extra });
 const withBuyIns = (states) => PLAYERS.map((p, i) => (states[i] === undefined ? p : { ...p, buyIn: states[i] }));
 
 const crate = (name, label = '', open = false) => `<div class="crate">${renderFlipCard(name ? item(name) : null, open)}`
@@ -40,8 +40,8 @@ const PAGES = [
     title: 'STORAGE UNITS',
     art: () => `<div class="rb-row rb-units">${['locker', 'medium', 'jumbo'].map((id) => renderUnitCard(UNITS[id])).join('')}</div>`,
     text: [
-      'Each round, one player is the Auctioneer and a storage unit comes up. Everyone else bids on it.',
-      'The clipboard shows how many items are inside, whether the Auctioneer flips one crate, and when you may peek.',
+      'The game has an automatic Auctioneer. It puts one storage unit up for auction at a time, and every player gets to bid on every unit.',
+      'The clipboard shows how many items are inside, whether the Auctioneer flips one crate for everybody, and when you may peek.',
     ],
   },
   {
@@ -58,7 +58,7 @@ const PAGES = [
       + `<div class="rb-strip">${still(renderPlayers(view({ players: withBuyIns([null, 'in', 'pass', 'pending']) })))}</div></div>`,
     text: [
       'Everyone decides at the same time: pay the buy-in fee to bid, or pass and watch.',
-      'The fee goes to the Auctioneer (the host picks the amount, $100 by default). The Auctioneer can buy in too, but pays the bank. Players who do not decide before the clock runs out are passed.',
+      'The fee goes to the bank (the host picks the amount, $100 by default). Players who do not decide before the clock runs out are passed.',
     ],
   },
   {
@@ -66,8 +66,8 @@ const PAGES = [
     art: () => `<div class="rb-stack">${still(renderBidPanel(view({ phase: 'bidding', bid: { amount: 1200, bidderId: 'c' }, call: 1 })))}`
       + `<div class="quick">${pill('', '+$100')}${pill('', '+$500')}${pill('', '+$1,000')}</div></div>`,
     text: [
-      'Anyone who bought in, the Auctioneer included, can raise at any time, in steps of $100. The highest bid leads.',
-      'You can only bid what you can pay: cash plus the value of your items. The Auctioneer calls going once, going twice, SOLD, and every new bid restarts the count.',
+      'Anyone who bought in can raise at any time, in steps of $100. The highest bid leads.',
+      'You can only bid what you can pay: cash plus the value of your items. The Auctioneer counts going once, going twice, SOLD on its own, and every new bid restarts the count.',
     ],
   },
   {
@@ -80,7 +80,7 @@ const PAGES = [
       myItems: [item('Garden Gnomes')],
     })))}</div>`,
     text: [
-      'The winner pays the price with cash and any items they own. No change is given, so anything over the price is lost.',
+      'The winner pays the bank with cash and any items they own. No change is given, so anything over the price is lost.',
       'Then the unit is opened and every item inside is yours, good or bad.',
     ],
   },
@@ -96,7 +96,7 @@ const PAGES = [
     title: 'THE FINISH',
     art: () => `<div class="rb-strip">${still(renderPlayers(view({ bid: { amount: 0, bidderId: 'a' } })))}</div>`,
     text: [
-      'Everybody gets the same number of turns as Auctioneer (in Auto mode the computer runs the auction for you). Before the game, the host can set how many turns each, the starting cash and the buy-in fee.',
+      'The game lasts a set number of rounds, one storage unit each. Before it starts, the host picks the number of rounds, the starting cash and the buy-in fee.',
       'When the last unit is sold, all items are shown and the richest player wins.',
     ],
   },

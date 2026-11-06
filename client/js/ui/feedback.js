@@ -30,7 +30,6 @@ export function feedbackFor(events, { you, nameOf }) {
         out.push({ sound: 'fine', banner: { text: e.by === you ? 'YOU ARE OUT' : 'ELIMINATED', kind: 'fined' } });
         out.push({ toast: `${nameOf(e.by)} is out of the game` });
         break;
-      case 'auto-takeover': out.push({ toast: 'The server took over as Auctioneer for this round' }); break;
       default: break;
     }
   }

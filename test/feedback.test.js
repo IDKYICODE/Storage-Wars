@@ -39,7 +39,6 @@ test('SOLD, fines, eliminations and takeovers keep their feedback', () => {
   assert.equal(find(outMe, 'banner').banner.text, 'YOU ARE OUT');
   const outOther = all([{ type: 'eliminated', by: 'p2' }]);
   assert.equal(find(outOther, 'banner').banner.text, 'ELIMINATED');
-  assert.match(find(all([{ type: 'auto-takeover' }]), 'toast').toast, /server took over/i);
 });
 
 test('calls and bids map to sounds; unknown events do nothing', () => {

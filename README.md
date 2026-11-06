@@ -8,17 +8,15 @@ STORAGE WARS is a free online version of the storage-unit auction card game *Bid
 
 ## How a game works
 
-Everyone starts with the same cash ($5,000 by default). Each round one player is the **Auctioneer** and the others bid on a **storage unit** full of face-down items.
+Everyone starts with the same cash ($5,000 by default). The game has an **automatic Auctioneer**: it puts one **storage unit** at a time up for auction, and every player can bid on every unit.
 
-- **Buy in** (by default $100, paid to the Auctioneer) to join the auction, or pass. Everyone decides at the same time, the Auctioneer too (their own fee and any price they pay go to the bank).
-- **Peek** at a crate or watch the Auctioneer flip one, depending on how big the unit is. Peeks are private: only you see what you peeked at.
-- **Bid** in steps of $100, up to what you can pay (cash plus the value of your items). When the bidding stops, the Auctioneer calls "going once, going twice, SOLD!".
-- The winner **pays** with cash or items they already won, and opens the unit. Junk costs you money, valuables pay off, and a **Havoc** card wipes out the whole unit, so you paid for nothing.
-- Everyone is Auctioneer the same number of times. The richest player (cash plus item values) wins.
+- **Buy in** (by default $100, paid to the bank) to join the auction, or pass. Everyone decides at the same time.
+- **Peek** at a crate, or watch the Auctioneer flip one, depending on how big the unit is. Peeks are private: only you see what you peeked at.
+- **Bid** in steps of $100, up to what you can pay (cash plus the value of your items). When the bidding stops, the Auctioneer calls "going once, going twice, SOLD!" by itself.
+- The winner **pays the bank** with cash or items they already won, and opens the unit. Junk costs you money, valuables pay off, and a **Havoc** card wipes out the whole unit, so you paid for nothing.
+- After the last round the richest player (cash plus item values) wins.
 
-The host sets the game up in the lobby: **Manual** or **Auto** Auctioneer, turns each (1 to 99, the decks reshuffle when they run out), starting cash ($1,000 to $20,000) and the buy-in fee ($100 to $1,000). A **How to play** booklet with pictures of the real cards and controls is on the entry screen.
-
-Manual means a real player runs each auction; Auto means the server runs it.
+The host sets the game up in the lobby: the number of rounds (1 to 99; the decks reshuffle when they run out), starting cash ($1,000 to $20,000) and the buy-in fee ($100 to $1,000). A **How to play** booklet with pictures of the real cards and controls is on the entry screen.
 
 ![Lobby with room code and players](docs/screenshots/lobby.jpg)
 
@@ -34,7 +32,7 @@ Manual means a real player runs each auction; Auto means the server runs it.
 
 - Realtime play over WebSockets, with a 4-letter room code and an invite link
 - Hidden information is enforced on the server: your browser never receives a card you are not allowed to see
-- Manual or Auto Auctioneer, timers for every waiting phase, and rejoin after a dropped connection
+- An automatic Auctioneer, timers for every waiting phase, and rejoin after a dropped connection
 - Works on phones and laptops, with synthesized sound effects and a mute switch
 - No accounts, no database: rooms live in memory
 

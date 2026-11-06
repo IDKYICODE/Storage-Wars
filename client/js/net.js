@@ -82,7 +82,6 @@ export function createNet(socket, storage) {
     join: (code, name) => enter('room:join', { code, name }),
     act: (type, payload = {}) => ask('game:act', { ...payload, type }),
     kick: (playerId) => ask('room:kick', { playerId }),
-    setMode: (mode) => ask('room:mode', { mode }),
     setSettings: (patch) => ask('room:settings', patch),
     start: () => ask('room:start', {}),
     async leave() {

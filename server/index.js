@@ -104,12 +104,6 @@ export function startServer({ port = Number(process.env.PORT) || 3000, tickMs = 
       return { ok: true };
     });
 
-    on('room:mode', ({ mode }) => {
-      const room = rooms.setMode(token, mode);
-      push(room);
-      return { ok: true };
-    });
-
     on('room:settings', (patch) => {
       const room = rooms.setSettings(token, patch);
       push(room);

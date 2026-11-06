@@ -43,15 +43,12 @@ export function validatePayment(player, price, pay) {
 
 function transfer(state, fromId, pay) {
   const from = state.players[fromId];
-  const to = fromId === state.auctioneerId ? null : state.players[state.auctioneerId]; // an Auctioneer who pays pays the bank
   from.cash -= pay.cash;
-  if (to) to.cash += pay.cash;
-  else state.bank += pay.cash;
+  state.bank += pay.cash; // payments go to the bank: the automatic Auctioneer holds nothing
   for (const id of pay.itemIds) {
     const idx = from.items.findIndex((x) => x.id === id);
     const [item] = from.items.splice(idx, 1);
-    if (to) to.items.push(item);
-    else state.bank += item.value;
+    state.bank += item.value;
   }
 }
 
@@ -62,7 +59,7 @@ function transfer(state, fromId, pay) {
 function announce(state, events, type, base, pay) {
   events.push({ type, ...base, cash: pay.cash, itemCount: pay.itemIds.length });
   if (!pay.itemIds.length) return;
-  for (const to of new Set([base.by, state.auctioneerId])) events.push({ type: `${type}-items`, to, itemIds: pay.itemIds });
+  events.push({ type: `${type}-items`, to: base.by, itemIds: pay.itemIds });
 }
 
 function reveal(state, now, events) {

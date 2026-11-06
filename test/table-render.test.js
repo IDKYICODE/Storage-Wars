@@ -7,11 +7,10 @@ import { UNITS } from '../shared/cards.js';
 
 const item = (i, tier = 'valuable') => ({ id: `sentinel-${i}`, tier, name: `Sentinel Name ${i}`, value: 1000 * (i + 1), flavor: `Flavor ${i}` });
 
-/** Four players, p0 Auctioneer, a jumbo with five distinctly named crates. */
-function setup({ unit = 'jumbo', mode = 'manual', phase } = {}) {
-  const s = createGame(['p0', 'p1', 'p2', 'p3'].map((id) => ({ id, name: id.toUpperCase() })), mode, 1);
+/** Four players, a jumbo with five distinctly named crates. */
+function setup({ unit = 'jumbo', phase } = {}) {
+  const s = createGame(['p0', 'p1', 'p2', 'p3'].map((id) => ({ id, name: id.toUpperCase() })), 1);
   const { count, ...u } = UNITS[unit];
-  s.auctioneerId = 'p0';
   s.unit = u;
   s.slots = Array.from({ length: u.items }, (_, i) => ({ item: item(i), faceUp: false }));
   s.peeks = {};
@@ -21,7 +20,7 @@ function setup({ unit = 'jumbo', mode = 'manual', phase } = {}) {
 }
 const html = (s, id, ui) => renderTable(viewFor(s, id), ui);
 
-test('buy-in: every player, the Auctioneer included, is offered Buy in and Pass at the same time', () => {
+test('buy-in: every player is offered Buy in and Pass at the same time', () => {
   const s = setup({ unit: 'locker' }); // locker: no flip, goes straight to buy-in
   for (const bidder of ['p0', 'p1', 'p2', 'p3']) {
     assert.ok(html(s, bidder).includes('Buy in $100'), bidder);
@@ -72,22 +71,16 @@ test('a flipped crate is shown face-up to everyone with a FLIPPED label', () => 
   }
 });
 
-test('flip phase (manual): the Auctioneer can tap crates to flip, others see who is choosing', () => {
-  const s = setup({ unit: 'jumbo', mode: 'manual' });
+test('flip phase: nobody gets a flip button or tappable crates; the headline says the Auctioneer flips and the badge says AUTO', () => {
+  const s = setup({ unit: 'jumbo' });
   assert.equal(s.phase, 'flip');
-  const a = html(s, 'p0', { pick: 'flip' });
-  assert.equal((a.match(/class="crate tap"/g) || []).length, 5);
-  assert.ok(a.includes('data-pick="flip"'));
-  const other = html(s, 'p2');
-  assert.ok(!/class="crate tap"/.test(other));
-  assert.ok(other.includes('P0 is choosing'));
-});
-
-test('flip phase (auto): nobody can flip and the badge says AUTO', () => {
-  const s = setup({ unit: 'jumbo', mode: 'auto' });
-  const a = html(s, 'p0');
-  assert.ok(!a.includes('data-pick="flip"'));
-  assert.ok(a.includes('AUTO'));
+  for (const id of ['p0', 'p2']) {
+    const h = html(s, id, { pick: 'flip' });
+    assert.ok(!h.includes('data-pick="flip"'));
+    assert.ok(!/class="crate tap"/.test(h));
+    assert.ok(h.includes('The Auctioneer is flipping a crate'));
+    assert.ok(h.includes('AUTO'));
+  }
 });
 
 test('peek: a peek button appears when allowed, and tapping mode makes crates tappable', () => {
@@ -143,14 +136,10 @@ test('eliminated players are marked in the strip', () => {
   assert.ok(/class="chip[^"]*out/.test(html(s, 'p1')));
 });
 
-test('the Auctioneer is told how their seat differs: they collect fees, can bid, and pay the bank', () => {
+test('the top bar names the automatic Auctioneer and no player is marked as one', () => {
   const s = setup({ unit: 'locker' });
-  const note = 'You are the Auctioneer';
-  assert.ok(html(s, 'p0').includes(note));
-  assert.ok(!html(s, 'p1').includes(note));
-  s.phase = 'bidding';
-  s.buyIns = { p1: 'in', p2: 'in' };
-  assert.ok(html(s, 'p0').includes(note));
-  assert.ok(html(s, 'p0').includes('can bid too'));
-  assert.ok(html(s, 'p0').includes('go to the bank'));
+  const h = html(s, 'p1');
+  assert.ok(h.includes('AUCTIONEER') && h.includes('AUTO'));
+  assert.ok(!h.includes('You are the Auctioneer'));
+  assert.ok(!/class="chip[^"]*auct/.test(h));
 });

@@ -6,11 +6,10 @@ import { UNITS } from '../shared/cards.js';
 
 const hid = (i) => ({ id: `hid-${i}`, tier: 'valuable', name: `HiddenName${i}`, value: 1000 * (i + 1) });
 
-/** 4 players, p0 Auctioneer, a 5-crate jumbo in the buy-in phase; peeks: p0->1, p1->2, p2->4. */
+/** 4 players, a 5-crate jumbo in the buy-in phase; peeks: p0->1, p1->2, p2->4. */
 function midRound() {
-  const s = createGame(['p0', 'p1', 'p2', 'p3'].map((id) => ({ id, name: id })), 'manual', 1);
+  const s = createGame(['p0', 'p1', 'p2', 'p3'].map((id) => ({ id, name: id })), 1);
   const { count, ...u } = UNITS.jumbo;
-  s.auctioneerId = 'p0';
   s.unit = u;
   s.slots = [0, 1, 2, 3, 4].map((i) => ({ item: hid(i), faceUp: false }));
   s.itemDeck = [{ id: 'deck-secret-1', tier: 'junk', name: 'DeckSecret1', value: -100 }];
@@ -71,7 +70,7 @@ test('during the reveal only the winner sees the unit; a voided unit shows just 
   assert.ok(!text(s, 'p3').includes('hid-1'));
 });
 
-test('can-flags follow the phase, the role and the mode', () => {
+test('can-flags follow the phase and what the player did', () => {
   const s = midRound();
   const can = (id) => viewFor(s, id).can;
   for (const id of ['p1', 'p2', 'p3']) assert.deepEqual([can(id).buyin, can(id).pass], [true, true], id); // all at once
@@ -79,8 +78,6 @@ test('can-flags follow the phase, the role and the mode', () => {
   assert.deepEqual([can('p2').buyin, can('p2').pass], [false, false]); // decided already
   s.buyIns = {};
   assert.deepEqual([can('p0').buyin, can('p0').pass], [true, true]); // the Auctioneer buys in or passes too
-  assert.equal(can('p0').flip, false);
-  assert.equal(can('p3').flip, false);
   assert.equal(can('p0').peek, false); // already peeked
   assert.equal(can('p3').peek, true); // jumbo allows peeks before buy-in
   s.players.p1.cash = 50;
@@ -89,14 +86,10 @@ test('can-flags follow the phase, the role and the mode', () => {
   s.phase = 'bidding';
   s.buyIns = { p1: 'in', p2: 'in', p3: 'pass' };
   s.bid = { amount: 300, bidderId: 'p1' };
-  assert.equal(can('p0').bid, false);
+  assert.equal(can('p0').bid, false); // p0 did not buy in
   assert.equal(can('p1').bid, false); // leader
   assert.equal(can('p2').bid, true);
   assert.equal(can('p3').bid, false);
-  assert.equal(can('p0').call, true);
-  assert.equal(can('p2').call, false);
-  s.mode = 'auto';
-  assert.equal(viewFor(s, 'p0').can.call, false);
 
   s.phase = 'payment';
   s.winner = { playerId: 'p1', price: 300 };
@@ -108,7 +101,7 @@ test('can-flags follow the phase, the role and the mode', () => {
   assert.ok(viewFor(s, 'p1').payment.suggested);
 });
 
-test('buy-in status: pending for every undecided player, the Auctioneer included', () => {
+test('buy-in status: pending for every undecided player', () => {
   const s = midRound();
   s.buyIns = { p1: 'in' };
   const st = Object.fromEntries(viewFor(s, 'p2').players.map((p) => [p.id, p.buyIn]));
@@ -136,7 +129,8 @@ test('filterEvents drops other players private events and never leaks items in p
 });
 
 test('a view comes straight out of a fresh real game without throwing', () => {
-  const s = createGame(['p0', 'p1', 'p2'].map((id) => ({ id, name: id })), 'auto', 3);
+  const s = createGame(['p0', 'p1', 'p2'].map((id) => ({ id, name: id })), 3);
   for (const id of s.order) assert.doesNotThrow(() => viewFor(s, id));
-  assert.equal(viewFor(s, 'p0').totalRounds, 6);
+  assert.equal(viewFor(s, 'p0').totalRounds, 8);
+  assert.ok(!('auctioneerId' in viewFor(s, 'p0')) && !('mode' in viewFor(s, 'p0')));
 });

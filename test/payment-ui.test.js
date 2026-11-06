@@ -12,8 +12,7 @@ const JUNK = it('junk', 'Junk Thing', -300, 'junk');
 
 /** p1 won at `price`; p1 holds cash and the three items above. */
 function paying({ price = 1500, cash = 1000, items = [RADIO, SWORD, JUNK] } = {}) {
-  const s = createGame(['p0', 'p1', 'p2'].map((id) => ({ id, name: id.toUpperCase() })), 'manual', 1);
-  s.auctioneerId = 'p0';
+  const s = createGame(['p0', 'p1', 'p2'].map((id) => ({ id, name: id.toUpperCase() })), 1);
   s.buyIns = { p1: 'in', p2: 'pass' };
   s.phase = 'payment';
   s.winner = { playerId: 'p1', price };

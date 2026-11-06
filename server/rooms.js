@@ -5,7 +5,7 @@ import { DEFAULT_CONFIG, settingProblem } from './game/state.js';
 import { viewFor, filterEvents } from './game/view.js';
 
 export class RoomError extends Error {
-  /** code: bad-name | no-room | full | started | not-host | bad-count | bad-mode | bad-target | no-game */
+  /** code: bad-name | no-room | full | started | not-host | bad-count | bad-target | no-game */
   constructor(code, message = code) {
     super(message);
     this.code = code;
@@ -57,7 +57,7 @@ export class Rooms {
 
   create(name) {
     cleanName(name);
-    const room = { code: this.#newCode(), hostId: null, mode: 'manual', settings: { ...DEFAULT_CONFIG }, players: [], game: null };
+    const room = { code: this.#newCode(), hostId: null, settings: { ...DEFAULT_CONFIG }, players: [], game: null };
     const out = this.#addPlayer(room, name);
     room.hostId = out.player.id;
     this.rooms.set(room.code, room);
@@ -149,14 +149,6 @@ export class Rooms {
     return room;
   }
 
-  setMode(token, mode) {
-    const { room } = this.#hostOnly(token);
-    if (room.game) throw new RoomError('started');
-    if (mode !== 'manual' && mode !== 'auto') throw new RoomError('bad-mode');
-    room.mode = mode;
-    return room;
-  }
-
   /** Host-only, lobby-only. Every key is checked before anything is applied. */
   setSettings(token, patch) {
     const { room } = this.#hostOnly(token);
@@ -175,7 +167,7 @@ export class Rooms {
     if (room.game) throw new RoomError('started');
     if (room.players.length < MIN_PLAYERS || room.players.length > MAX_PLAYERS) throw new RoomError('bad-count');
     const seed = Math.floor(this.rng() * 2 ** 32);
-    room.game = createGame(room.players.map((p) => ({ id: p.id, name: p.name })), room.mode, seed, this.now(), room.settings);
+    room.game = createGame(room.players.map((p) => ({ id: p.id, name: p.name })), seed, this.now(), room.settings);
     // createGame starts everyone online; carry over anyone who dropped in the lobby so their timers behave at once
     for (const p of room.players) {
       if (!p.connected) room.game = setPresence(room.game, p.id, false, p.offlineSince ?? this.now()).state;
@@ -241,7 +233,6 @@ export class Rooms {
       lobby: {
         code: room.code,
         hostId: room.hostId,
-        mode: room.mode,
         settings: { ...room.settings },
         players: room.players.map((p) => ({ id: p.id, name: p.name, connected: p.connected })),
         you: playerId,

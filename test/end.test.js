@@ -7,7 +7,7 @@ import { renderEnd } from '../client/js/screens/end.js';
 const it = (id, name, value, tier = 'common') => ({ id, tier, name, value, flavor: 'x' });
 
 function finished({ cash = [5000, 9000, 1000], items = [[], [it('s', 'Sword Thing', 3000, 'valuable')], [it('j', 'Junk Thing', -300, 'junk')]] } = {}) {
-  const s = createGame(['p0', 'p1', 'p2'].map((id) => ({ id, name: id.toUpperCase() })), 'manual', 1);
+  const s = createGame(['p0', 'p1', 'p2'].map((id) => ({ id, name: id.toUpperCase() })), 1);
   s.order.forEach((id, i) => { s.players[id].cash = cash[i]; s.players[id].items = items[i]; });
   s.phase = 'gameover';
   s.result = { scores: scores(s), winnerIds: winnerIds(s) };

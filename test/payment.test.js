@@ -8,14 +8,13 @@ import { UNITS } from '../shared/cards.js';
 const it = (id, value, tier = 'common') => ({ id, tier, name: id, value });
 const HAVOC = it('mold', 0, 'havoc');
 
-/** p0 Auctioneer, p1 won at `price`, p2 also bought in, p3 passed. Phase: payment. */
+/** p1 won at `price`, p2 also bought in, p0 and p3 passed. Phase: payment. */
 function paying({ price = 1000, items, n = 4 } = {}) {
-  const s = createGame(Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `p${i}` })), 'manual', 1);
+  const s = createGame(Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `p${i}` })), 1);
   const { count, ...unit } = UNITS.medium;
-  s.auctioneerId = 'p0';
   s.unit = unit;
   s.slots = (items || [it('a', 500), it('b', 500), it('c', 500)]).map((item) => ({ item, faceUp: false }));
-  s.buyIns = { p1: 'in', p2: 'in', p3: 'pass' };
+  s.buyIns = { p0: 'pass', p1: 'in', p2: 'in', p3: 'pass' };
   s.peeks = { p2: [0] };
   s.phase = 'payment';
   s.winner = { playerId: 'p1', price };
@@ -56,21 +55,20 @@ test('validatePayment rejects bad cash, unowned, duplicate and junk items, and s
   assert.doesNotThrow(() => validatePayment(p, 1500, { cash: 0, itemIds: ['v'] })); // overpay is fine
 });
 
-test('paying with an item hands it to the Auctioneer and no change comes back', () => {
+test('paying with an item gives it to the bank and no change comes back', () => {
   const s = paying({ price: 1500 });
   s.players.p1.cash = 0;
   s.players.p1.items = [it('big', 3000)];
-  const before = total(s.players.p0);
   const { state, events } = act(s, 'pay', 'p1', { cash: 0, itemIds: ['big'] });
   assert.equal(state.players.p1.items.some((x) => x.id === 'big'), false);
-  assert.ok(state.players.p0.items.some((x) => x.id === 'big'));
-  assert.equal(total(state.players.p0), before + 3000);
+  assert.ok(Object.values(state.players).every((p) => !p.items.some((x) => x.id === 'big')));
+  assert.equal(state.bank, 3000);
   assert.equal(state.players.p1.cash, 0);
   assert.equal(state.phase, 'reveal');
   assert.ok(events.some((e) => e.type === 'paid'));
 });
 
-test('public payment events never name the items used; only the payer and the Auctioneer learn them', () => {
+test('public payment events never name the items used; only the payer learns them', () => {
   const s = paying({ price: 1500 });
   s.players.p1.cash = 0;
   s.players.p1.items = [it('secret-rug', 3000)];
@@ -80,7 +78,7 @@ test('public payment events never name the items used; only the payer and the Au
   const paid = publicEvents.find((e) => e.type === 'paid');
   assert.equal(paid.itemCount, 1);
   const priv = events.filter((e) => e.type === 'paid-items');
-  assert.deepEqual(priv.map((e) => e.to).sort(), ['p0', 'p1']);
+  assert.deepEqual(priv.map((e) => e.to), ['p1']);
   assert.ok(priv.every((e) => e.itemIds.join() === 'secret-rug'));
 });
 
@@ -91,7 +89,7 @@ test('a fine paid with items does not leak them either', () => {
   const { events } = tick(s, 60000);
   assert.ok(events.some((e) => e.type === 'fined' && e.amount === 1000));
   assert.ok(!JSON.stringify(events.filter((e) => !e.to)).includes('secret-clock'));
-  assert.deepEqual(events.filter((e) => e.type === 'fined-items').map((e) => e.to).sort(), ['p0', 'p1']);
+  assert.deepEqual(events.filter((e) => e.type === 'fined-items').map((e) => e.to), ['p1']);
 });
 
 test('only the winner pays, and only in the payment phase', () => {
@@ -117,7 +115,7 @@ test('winning a unit with Havoc voids it: paid for nothing, only the Havoc card 
   const { state, events } = act(s, 'pay', 'p1', { cash: 1000, itemIds: [] });
   assert.equal(state.voided, true);
   assert.equal(state.players.p1.items.length, 0);
-  assert.equal(state.players.p0.cash, 6000);
+  assert.equal(state.bank, 1000);
   const pubText = JSON.stringify(events.filter((e) => !e.to));
   assert.ok(pubText.includes('mold'));
   assert.ok(!pubText.includes('secret1') && !pubText.includes('secret2'));
@@ -128,13 +126,12 @@ test('the reveal timer starts the next round', () => {
   assert.deepEqual(s.deadline, { kind: 'reveal', at: 9000 });
   const next = tick(s, 9000);
   assert.equal(next.state.roundNo, 2);
-  assert.equal(next.state.auctioneerId, 'p1');
   assert.ok(next.events.some((e) => e.type === 'round-end'));
 });
 
 test('the last reveal ends the game with scores', () => {
   const s = paying();
-  s.order.forEach((id) => { s.players[id].turnsPlayed = id === 'p0' ? 1 : 2; });
+  s.roundNo = s.config.rounds; // the final round
   const paid = act(s, 'pay', 'p1', { cash: 1000, itemIds: [] }).state;
   const end = tick(paid, 4000);
   assert.equal(end.state.phase, 'gameover');
@@ -154,7 +151,7 @@ test('failure to pay: $1,000 fine, same auction restarts without the winner, pee
   s.players.p1.cash = 1500;
   const { state, events } = tick(s, 60000);
   assert.equal(state.players.p1.cash, 500);
-  assert.equal(state.players.p0.cash, 6000);
+  assert.equal(state.bank, 1000);
   assert.ok(events.some((e) => e.type === 'fined' && e.by === 'p1' && e.amount === 1000));
   assert.deepEqual(state.excluded, ['p1']);
   assert.equal(state.phase, 'bidding');
@@ -176,17 +173,17 @@ test('an unaffordable winner is failed at the next tick without waiting out the 
 });
 
 function tickToSold(s) {
-  const b = createGame([{ id: 'p0', name: 'p0' }, { id: 'p1', name: 'p1' }, { id: 'p2', name: 'p2' }], 'manual', 1);
-  b.auctioneerId = 'p0';
-  b.buyIns = { p1: 'in', p2: 'in' };
+  const b = createGame([{ id: 'p0', name: 'p0' }, { id: 'p1', name: 'p1' }, { id: 'p2', name: 'p2' }], 1);
+  b.buyIns = { p0: 'pass', p1: 'in', p2: 'in' };
   b.players.p1.cash = s.players.p1.cash;
   b.phase = 'bidding';
   b.bid = { amount: 4000, bidderId: 'p1' };
   b.call = 2;
-  return reduce(b, { type: 'call', by: 'p0' }, 777).state;
+  b.deadline = { kind: 'call', at: 777 };
+  return tick(b, 777).state;
 }
 
-test('fine edge: exactly $1,000 of assets is fined; $999 is eliminated and everything goes to the Auctioneer', () => {
+test('fine edge: exactly $1,000 of assets is fined; $999 is eliminated and everything goes to the bank', () => {
   const rich = paying({ price: 4000 });
   rich.players.p1.cash = 1000;
   const a = tick(rich, 60000).state;
@@ -200,8 +197,7 @@ test('fine edge: exactly $1,000 of assets is fined; $999 is eliminated and every
   assert.equal(state.players.p1.eliminated, true);
   assert.equal(state.players.p1.cash, 0);
   assert.equal(state.players.p1.items.length, 0);
-  assert.equal(state.players.p0.cash, 5000 + 999);
-  assert.ok(state.players.p0.items.some((x) => x.id === 'junk'));
+  assert.equal(state.bank, 499); // $999 cash plus the junk item's -$500
   assert.ok(events.some((e) => e.type === 'eliminated' && e.by === 'p1'));
   assert.equal(state.phase, 'bidding'); // p2 is still in the auction
 });
@@ -213,7 +209,6 @@ test('no other buyer left after a failure: unit discarded and the round ends', (
   const { state, events } = tick(s, 60000);
   assert.ok(events.some((e) => e.type === 'discarded'));
   assert.equal(state.roundNo, 2);
-  assert.equal(state.players.p0.turnsPlayed, 1);
 });
 
 test('the last survivor ends the game', () => {

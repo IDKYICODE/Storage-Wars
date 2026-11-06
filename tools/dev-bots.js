@@ -15,14 +15,12 @@ function play(socket) {
     const act = (type, extra = {}) => socket.emit('game:act', { type, ...extra }, () => {});
     if (can.buyin && Math.random() < 0.8) act('buyin');
     else if (can.pass) act('pass');
-    if (can.flip) setTimeout(() => act('flip', { index: view.slots.findIndex((s) => !s.faceUp) }), 1200);
     if (can.peek && Math.random() < 0.5) act('peek', { index: view.slots.findIndex((s) => !s.faceUp && !s.peeked) });
     if (can.ready) act('ready');
     if (can.bid && (bids[view.roundNo] ?? 0) < 4 && Math.random() < 0.6) {
       bids[view.roundNo] = (bids[view.roundNo] ?? 0) + 1;
       setTimeout(() => act('bid', { amount: (view.bid?.amount ?? 0) + 100 * (1 + Math.floor(Math.random() * 4)) }), 900 + Math.random() * 1500);
     }
-    if (can.call) setTimeout(() => act('call'), 2500);
     if (can.pay && view.payment.suggested) setTimeout(() => act('pay', view.payment.suggested), 1500);
   });
 }

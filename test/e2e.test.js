@@ -27,7 +27,7 @@ const until = async (fn, ms = 5000) => {
   throw new Error('timed out waiting');
 };
 
-async function lobby(srv, n = 3, mode = 'auto') {
+async function lobby(srv, n = 3) {
   const cs = Array.from({ length: n }, () => client(srv.port));
   await Promise.all(cs.map((c) => c.ready));
   const made = await cs[0].ask('room:create', { name: 'Ayush' });
@@ -38,7 +38,6 @@ async function lobby(srv, n = 3, mode = 'auto') {
     assert.equal(j.ok, true);
     cs[i].token = j.token;
   }
-  await cs[0].ask('room:mode', { mode });
   return { cs, code: made.code };
 }
 
@@ -59,8 +58,6 @@ function autoplay(c, bidsPerRound = 2) {
         act('bid', { amount: (view.bid?.amount ?? 0) + 100 });
       }
       if (can.pay && view.payment.suggested) act('pay', view.payment.suggested);
-      if (can.flip) act('flip', { index: view.slots.findIndex((s) => !s.faceUp) });
-      if (can.call) act('call');
     });
   });
 }
@@ -68,7 +65,7 @@ function autoplay(c, bidsPerRound = 2) {
 test('three clients play a whole Auto game and agree on the winner', { timeout: 90000 }, async () => {
   const srv = await startServer({ port: 0, tickMs: 20, now: fastClock });
   try {
-    const { cs } = await lobby(srv, 3, 'auto');
+    const { cs } = await lobby(srv, 3);
     cs.forEach((c) => autoplay(c));
     assert.equal((await cs[0].ask('room:start', {})).ok, true);
     const results = await Promise.all(cs.map((c) => c.over));
@@ -81,39 +78,25 @@ test('three clients play a whole Auto game and agree on the winner', { timeout: 
   }
 });
 
-test('manual mode: the Auctioneer client drives flip and the calls', { timeout: 90000 }, async () => {
-  const srv = await startServer({ port: 0, tickMs: 20, now: fastClock });
-  try {
-    const { cs } = await lobby(srv, 3, 'manual');
-    cs.forEach((c) => autoplay(c));
-    await cs[0].ask('room:start', {});
-    const results = await Promise.all(cs.map((c) => c.over));
-    assert.ok(results[0].winnerIds.length >= 1);
-    cs.forEach((c) => c.close());
-  } finally {
-    await srv.close();
-  }
-});
-
 test('no message ever carries a hidden card, the deck, or anyone else\'s token', async () => {
   const srv = await startServer({ port: 0, tickMs: 1000000, now: () => T0 });
   try {
-    const { cs, code } = await lobby(srv, 3, 'manual');
+    const { cs, code } = await lobby(srv, 3);
     await cs[0].ask('room:start', {});
     const room = srv.rooms.rooms.get(code);
     const g = room.game;
     const [a, b, c] = room.players;
     // a fixed, recognizable round: a Locker-free jumbo with five uniquely named crates
-    g.auctioneerId = a.id;
     g.unit = { id: 'jumbo', name: 'Jumbo', items: 5, flip: true, peek: 'before' };
     g.slots = [0, 1, 2, 3, 4].map((i) => ({ item: { id: `SECRET-${i}`, tier: 'valuable', name: `SecretName${i}`, value: 1000 }, faceUp: false }));
     g.itemDeck = [{ id: 'DECK-SECRET', tier: 'junk', name: 'DeckSecretName', value: -100 }];
-    g.phase = 'flip';
+    g.slots[0].faceUp = true; // the game's automatic flip, already done
+    g.phase = 'buyin';
+    g.buyIns = {};
     cs[1].log.length = 0;
     cs[2].log.length = 0;
 
-    // Ayush flips crate 0 (public), then Bea peeks crate 3 (private)
-    assert.equal((await cs[0].ask('game:act', { type: 'flip', index: 0 })).ok, true);
+    // crate 0 is face-up (public); Bea peeks crate 3 (private)
     assert.equal((await cs[1].ask('game:act', { type: 'peek', index: 3 })).ok, true);
     await until(() => cs[2].states.length > 0 && cs[1].states.some((m) => m.view.slots[3]?.item));
 
@@ -139,7 +122,7 @@ test('no message ever carries a hidden card, the deck, or anyone else\'s token',
 test('a dropped client rejoins with its token and gets its seat and a current state back', async () => {
   const srv = await startServer({ port: 0, tickMs: 1000000, now: () => T0 });
   try {
-    const { cs, code } = await lobby(srv, 3, 'auto');
+    const { cs, code } = await lobby(srv, 3);
     await cs[0].ask('room:start', {});
     const room = srv.rooms.rooms.get(code);
     const cal = room.players[2];
@@ -164,7 +147,7 @@ test('a dropped client rejoins with its token and gets its seat and a current st
 test('opening the same seat in a second tab closes the first tab instead of letting them fight', async () => {
   const srv = await startServer({ port: 0, tickMs: 1000000, now: () => T0 });
   try {
-    const { cs, code } = await lobby(srv, 3, 'auto');
+    const { cs, code } = await lobby(srv, 3);
     await cs[0].ask('room:start', {});
     const first = client(srv.port);
     await first.ready;
@@ -206,7 +189,7 @@ test('after a server restart an old token is refused cleanly', async () => {
 test('garbage input is refused without hurting the server', async () => {
   const srv = await startServer({ port: 0, tickMs: 1000000, now: () => T0 });
   try {
-    const { cs } = await lobby(srv, 3, 'auto');
+    const { cs } = await lobby(srv, 3);
     assert.equal((await cs[0].ask('game:act', { type: 'bid', amount: 100 })).code, 'no-game');
     await cs[0].ask('room:start', {});
     assert.equal((await cs[1].ask('game:act', { type: 'bid', amount: 'abc' })).ok, false);
@@ -225,15 +208,16 @@ test('garbage input is refused without hurting the server', async () => {
   }
 });
 
-test('only the host can start, and a lobby change reaches everyone', async () => {
+test('only the host can start, and a settings change reaches everyone', async () => {
   const srv = await startServer({ port: 0, tickMs: 1000000 });
   try {
-    const { cs } = await lobby(srv, 3, 'manual');
+    const { cs } = await lobby(srv, 3);
     assert.equal((await cs[1].ask('room:start', {})).code, 'not-host');
+    assert.equal((await cs[1].ask('room:settings', { rounds: 3 })).code, 'not-host');
     const seen = [];
     cs[2].on('lobby', (l) => seen.push(l));
-    await cs[0].ask('room:mode', { mode: 'auto' });
-    await until(() => seen.some((l) => l.mode === 'auto'));
+    assert.equal((await cs[0].ask('room:settings', { rounds: 3 })).ok, true);
+    await until(() => seen.some((l) => l.settings.rounds === 3));
     cs.forEach((x) => x.close());
   } finally {
     await srv.close();

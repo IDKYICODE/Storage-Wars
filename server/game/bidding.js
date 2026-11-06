@@ -1,5 +1,5 @@
 import { ActionError, registerHandler, registerTimeout } from './registry.js';
-import { TIMERS, assets, buyInOrder, endRound, isAuto } from './state.js';
+import { TIMERS, assets, buyInOrder, endRound } from './state.js';
 
 const need = (ok, code, msg) => { if (!ok) throw new ActionError(code, msg); };
 
@@ -11,16 +11,12 @@ export function enterBidding(state, now) {
   state.phase = 'bidding';
   state.bid = null;
   state.call = 0;
-  state.deadline = isAuto(state)
-    ? { kind: 'opening', at: now + TIMERS.opening }
-    : { kind: 'bid-idle', at: now + TIMERS.bidIdle };
+  state.deadline = { kind: 'opening', at: now + TIMERS.opening };
 }
 
 /** Re-arms the clock after any bid or call. */
 function rearm(state, now) {
-  state.deadline = isAuto(state)
-    ? { kind: 'call', at: now + TIMERS.callStage }
-    : { kind: 'bid-idle', at: now + TIMERS.bidIdle };
+  state.deadline = { kind: 'call', at: now + TIMERS.callStage };
 }
 
 /**
@@ -63,21 +59,6 @@ registerHandler('bid', (state, action, now, events) => {
   rearm(state, now);
 });
 
-registerHandler('call', (state, action, now, events) => {
-  need(state.phase === 'bidding', 'wrong-phase');
-  need(action.by === state.auctioneerId && !isAuto(state), 'not-allowed');
-  if (!state.bid) {
-    if (!autoOpen(state, now, events)) return;
-  } else if (state.call < 2) {
-    state.call += 1;
-    events.push({ type: 'call', n: state.call });
-  } else {
-    sold(state, now, events);
-    return;
-  }
-  rearm(state, now);
-});
-
 registerTimeout('opening', (state, now, events) => {
   if (autoOpen(state, now, events)) rearm(state, now);
 });
@@ -90,11 +71,4 @@ registerTimeout('call', (state, now, events) => {
   } else {
     sold(state, now, events);
   }
-});
-
-registerTimeout('bid-idle', (state, now, events) => {
-  state.roundAuto = true;
-  events.push({ type: 'auto-takeover' });
-  if (!state.bid && !autoOpen(state, now, events)) return;
-  rearm(state, now);
 });

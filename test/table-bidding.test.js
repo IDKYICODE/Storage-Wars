@@ -6,11 +6,10 @@ import { viewFor } from '../server/game/view.js';
 import { renderTable } from '../client/js/screens/table.js';
 import { parseAmount } from '../client/js/ui/table-view.js';
 
-/** p0 Auctioneer; p1 and p2 bought in; p3 passed. Bidding is open. */
-function bidding({ mode = 'manual', bid = null, call = 0 } = {}) {
-  const s = createGame(['p0', 'p1', 'p2', 'p3'].map((id) => ({ id, name: id.toUpperCase() })), mode, 1);
-  s.auctioneerId = 'p0';
-  s.buyIns = { p1: 'in', p2: 'in', p3: 'pass' };
+/** p1 and p2 bought in; p0 and p3 passed. Bidding is open. */
+function bidding({ bid = null, call = 0 } = {}) {
+  const s = createGame(['p0', 'p1', 'p2', 'p3'].map((id) => ({ id, name: id.toUpperCase() })), 1);
+  s.buyIns = { p0: 'pass', p1: 'in', p2: 'in', p3: 'pass' };
   enterBidding(s, 0);
   s.bid = bid;
   s.call = call;
@@ -39,29 +38,16 @@ test('the leader sees "You\'re winning" and no bid buttons', () => {
   assert.ok(!h.includes('data-act="bid"'));
 });
 
-test('the Auctioneer and players who passed never see bid buttons', () => {
+test('players who passed never see bid buttons', () => {
   const s = bidding({ bid: { amount: 300, bidderId: 'p1' } });
   assert.ok(!html(s, 'p0').includes('data-act="bid"'));
+  assert.ok(html(s, 'p0').includes('You are watching this auction'));
   assert.ok(!html(s, 'p3').includes('data-act="bid"'));
   assert.ok(html(s, 'p3').includes('You are watching this auction'));
 });
 
-test('the manual Auctioneer button names the next call: GOING ONCE, GOING TWICE, SOLD!', () => {
-  const label = (call) => html(bidding({ bid: { amount: 300, bidderId: 'p1' }, call }), 'p0').match(/data-act="call"[^>]*>([^<]+)</)?.[1];
-  assert.equal(label(0), 'GOING ONCE');
-  assert.equal(label(1), 'GOING TWICE');
-  assert.equal(label(2), 'SOLD!');
-  assert.equal(html(bidding(), 'p0').match(/data-act="call"[^>]*>([^<]+)</)?.[1], 'OPEN BIDDING');
-});
-
-test('only the manual Auctioneer gets the call button', () => {
-  const s = bidding({ bid: { amount: 300, bidderId: 'p1' } });
-  assert.ok(!html(s, 'p2').includes('data-act="call"'));
-  assert.ok(!html(s, 'p1').includes('data-act="call"'));
-});
-
-test('auto mode: no call button, but everyone sees the call banner', () => {
-  const s = bidding({ mode: 'auto', bid: { amount: 300, bidderId: 'p1' }, call: 1 });
+test('there is no call button for anyone; everyone sees the automatic call banner', () => {
+  const s = bidding({ bid: { amount: 300, bidderId: 'p1' }, call: 1 });
   for (const id of ['p0', 'p1', 'p2', 'p3']) {
     const h = html(s, id);
     assert.ok(!h.includes('data-act="call"'), id);
