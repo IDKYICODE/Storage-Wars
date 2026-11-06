@@ -1,0 +1,31 @@
+.entry { position: relative; min-height: 100vh; min-height: 100dvh; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--display); }
+.entry > *:not(.scene) { position: relative; z-index: 2; }
+.entry .notice:not(.dark) { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); width: min(92vw, 460px); z-index: 5; }
+.notice { margin: 0; padding: 8px 14px; background: var(--paper); color: var(--ink); border: 3px solid var(--ink); border-radius: 10px; box-shadow: 0 4px 0 var(--ink); font-family: var(--body); font-weight: 700; font-size: 15px; text-align: center; }
+.notice:empty { display: none; }
+
+/* ---- registration clipboard, in front of the open doorway ---- */
+.board {
+  position: relative; width: min(92vw, 440px); margin: 16px 0; padding: 38px 14px 14px;
+  background: var(--mauve); border: 5px solid var(--ink); border-radius: 26px; box-shadow: 0 10px 0 var(--ink); color: var(--ink);
+  animation: dropin 0.5s cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+@keyframes dropin { from { transform: translateY(-40px) rotate(-3deg); opacity: 0; } }
+.board .clip { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 104px; height: 36px; border-radius: 9px; border: 3px solid var(--ink); background: linear-gradient(#e8eaee, #8b909b 55%, #c8ccd3); z-index: 3; }
+.board .clip i { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #4a5068; border: 2px solid var(--ink); }
+.paper { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 18px 16px 12px; text-align: center; background: #f4e9c4; border-radius: 10px; box-shadow: 3px 3px 0 #e2d3a0, 6px 6px 0 #d3c28a; }
+.paper h2 { margin: 0; font-size: clamp(26px, 7vw, 34px); letter-spacing: 2px; line-height: 1; border-bottom: 4px solid var(--ink); padding-bottom: 8px; width: 100%; }
+.field-wrap { width: 100%; display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.field-wrap > span { font: 400 18px var(--display); letter-spacing: 3px; }
+.field { width: 100%; font: 700 20px var(--body); padding: 9px 12px; background: #fff; color: var(--ink); border: 4px solid var(--ink); border-radius: 10px; }
+.field:focus { outline: none; border-color: var(--bad); }
+.code { position: relative; display: flex; gap: 8px; justify-content: space-between; }
+.code b { flex: 1; max-width: 76px; height: 78px; display: flex; align-items: center; justify-content: center; background: var(--paper); border: 4px solid var(--ink); border-radius: 12px; box-shadow: 0 5px 0 var(--ink); font: 400 52px var(--display); }
+.code b:nth-child(1) { transform: rotate(-2.5deg); } .code b:nth-child(2) { transform: rotate(1.5deg); } .code b:nth-child(3) { transform: rotate(-1deg); } .code b:nth-child(4) { transform: rotate(2.5deg); }
+.code b.cur { animation: blink 1s infinite; border-color: var(--bad); }
+@keyframes blink { 50% { background: #ffe3e6; } }
+.code input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; text-transform: uppercase; }
+.board .paper .btn { width: 100%; }
+.or { font: 700 12px var(--body); letter-spacing: 3px; opacity: 0.6; text-transform: uppercase; }
+.paper .notice.dark { background: #ffe3e6; color: #a1112b; }
+.link { background: none; border: 0; color: var(--ink); font: 700 14px var(--body); text-decoration: underline; padding: 6px; }

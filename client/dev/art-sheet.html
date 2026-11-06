@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Art contact sheet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Josefin+Sans:ital,wght@0,400;0,700;1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/cards.css">
+  <style>
+    body { padding: 16px; }
+    h2 { font-family: var(--display); letter-spacing: 2px; margin: 18px 0 6px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 18px; }
+    .cell { zoom: var(--z, 0.62); }
+    .cell .cw { perspective: none; }
+    .cell .in { transform: none; }
+    .cell .back { display: none; }
+    .cell .card { position: relative; transform: none; width: 230px; height: 330px; }
+    .units .cell { zoom: 0.62; }
+  </style>
+</head>
+<body>
+  <p>Dev-only contact sheet of every card. Append <code>?z=1</code> for full size, <code>?tier=junk</code> to filter.</p>
+  <div id="sheet"></div>
+  <script type="module">
+    import { ITEMS, UNITS, UNIT_IDS, TIERS } from '/shared/cards.js';
+    import { registerArt, renderItemCard } from '../js/ui/card.js';
+    const mods = ['junk', 'common', 'top', 'units'];
+    for (const m of mods) {
+      try {
+        const mod = await import(`../js/art/${m}.js`);
+        mod.register?.();
+      } catch (e) {
+        if (!String(e).includes('Failed to fetch') && !String(e).includes('404')) console.warn(m, e);
+      }
+    }
+    const q = new URLSearchParams(location.search);
+    document.documentElement.style.setProperty('--z', q.get('z') || '0.62');
+    const only = q.get('tier');
+    const sheet = document.getElementById('sheet');
+    for (const tier of TIERS) {
+      if (only && only !== tier) continue;
+      const items = ITEMS.filter((i) => i.tier === tier);
+      sheet.insertAdjacentHTML('beforeend', `<h2>${tier} (${items.length})</h2><div class="grid">${items.map((i) => `<div class="cell">${renderItemCard(i)}</div>`).join('')}</div>`);
+    }
+    try {
+      const { renderUnitCard } = await import('../js/ui/card.js');
+      if (renderUnitCard && !only) {
+        sheet.insertAdjacentHTML('beforeend', `<h2>storage units</h2><div class="grid units">${UNIT_IDS.map((u) => `<div class="cell">${renderUnitCard(UNITS[u])}</div>`).join('')}</div>`);
+      }
+    } catch (e) { /* units not drawn yet */ }
+  </script>
+</body>
+</html>

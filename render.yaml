@@ -1,0 +1,12 @@
+# Render blueprint: one free web service. Free tier, no payment method needed (see DEPLOY.md).
+services:
+  - type: web
+    name: storage-wars
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 22

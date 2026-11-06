@@ -1,0 +1,160 @@
+/* The table: in front of the facility wall. Chrome uses the card language and the reference palette:
+   navy plates, mauve trim, cream paper, ink outlines. */
+.table {
+  --cz: 0.5; --uz: 0.6;
+  position: relative; min-height: 100vh; min-height: 100dvh; max-width: 1100px; margin: 0 auto;
+  padding: 50px 12px 24px; display: flex; flex-direction: column; gap: 12px;
+}
+
+/* ---- top: round tag, auctioneer tag, and the marquee headline board ---- */
+.topbar { display: flex; flex-direction: column; gap: 10px; }
+.tl { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.round, .auct {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px 2px; background: var(--paper); color: var(--ink);
+  border: 3px solid var(--ink); border-radius: 8px; box-shadow: 0 3px 0 var(--ink); font: 400 17px var(--display); letter-spacing: 2px;
+}
+.round { transform: rotate(-1.2deg); } .auct { transform: rotate(1deg); }
+.gavel { width: 20px; height: 20px; flex: none; }
+.badge { font: 700 11px var(--body); letter-spacing: 2px; border: 2px solid var(--ink); border-radius: 20px; padding: 0 8px; color: var(--ink); }
+.badge.auto { background: var(--go); } .badge.manual { background: var(--warn); }
+.headline {
+  position: relative; display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 60px; padding: 10px 16px;
+  background: var(--navy); color: #fff; border: 5px solid var(--ink); border-radius: 8px;
+  box-shadow: 0 0 0 6px var(--mauve), 0 0 0 11px var(--ink), 0 14px 0 11px rgba(29, 26, 43, 0.3);
+  margin: 4px 8px 6px; font: 400 clamp(22px, 6vw, 32px)/1.05 var(--display); letter-spacing: 1.5px;
+}
+.clock { flex: none; min-width: 58px; text-align: center; font: 400 28px var(--display); background: var(--paper); color: var(--ink); border: 3px solid var(--ink); border-radius: 10px; padding: 1px 8px; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4); }
+.clock.low { background: var(--bad); color: #fff; animation: tick 0.5s infinite; }
+@keyframes tick { 50% { transform: scale(1.12); } }
+
+/* ---- players: cream ticket stubs ---- */
+.players { display: flex; gap: 10px; overflow-x: auto; padding: 10px 4px 12px; scroll-snap-type: x proximity; }
+.chip {
+  flex: none; scroll-snap-align: start; position: relative; display: grid; grid-template-columns: 1fr auto; grid-template-areas: "n n" "c i"; gap: 0 8px; align-items: center;
+  min-width: 112px; padding: 6px 12px 5px; background: var(--paper); color: var(--ink); border: 3px solid var(--ink); border-radius: 10px; box-shadow: 0 4px 0 var(--ink);
+}
+.chip::before, .chip::after { content: ""; position: absolute; top: 50%; width: 12px; height: 12px; margin-top: -6px; background: var(--navy); border: 3px solid var(--ink); border-radius: 50%; }
+.chip::before { left: -9px; } .chip::after { right: -9px; }
+.chip .gavel { position: absolute; top: -14px; right: -8px; width: 26px; height: 26px; background: var(--warn); border-radius: 50%; border: 3px solid var(--ink); padding: 3px; z-index: 2; }
+.cn { grid-area: n; font: 700 15px var(--body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 118px; }
+.cc { grid-area: c; font: 400 20px var(--display); letter-spacing: 1px; }
+.ci { grid-area: i; display: inline-flex; align-items: center; gap: 3px; font: 700 13px var(--body); }
+.ibox { width: 16px; height: 16px; }
+.chip.me { background: #d9fbe9; }
+.chip.turn { animation: turn 1s infinite; background: #ffe3e6; }
+@keyframes turn { 50% { transform: translateY(-4px); } }
+.chip.lead { background: var(--warn); }
+.chip.out { opacity: 0.45; text-decoration: line-through; }
+.chip.offline .cn::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 50%; background: #b9b4c8; border: 2px solid var(--ink); }
+.stat { position: absolute; top: 3px; right: 8px; font: 700 10px var(--body); letter-spacing: 1px; }
+.stat.s-in { color: #12804a; } .stat.s-pass { color: #7a7490; } .stat.s-out { color: var(--bad); }
+
+/* ---- stage: the unit card and the crates on pallets ---- */
+.stage { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.unitwrap { position: relative; }
+.unitwrap::after { content: ""; position: absolute; left: 8%; right: 8%; bottom: -6px; height: 14px; background: rgba(0, 0, 0, 0.35); border-radius: 50%; filter: blur(3px); z-index: -1; }
+.unitwrap .unitc { zoom: var(--uz); }
+.crates { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 10px; }
+.crate { position: relative; padding-bottom: 12px; }
+.crate::after { /* the pallet under each crate */
+  content: ""; position: absolute; left: 4%; right: 4%; bottom: 0; height: 13px; background: repeating-linear-gradient(90deg, #a8693a 0 16px, #6b4020 16px 19px);
+  border: 3px solid var(--ink); border-radius: 3px; box-shadow: 0 5px 0 rgba(0, 0, 0, 0.35); z-index: -1;
+}
+.crate .cw { zoom: var(--cz); }
+.crate .label {
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); z-index: 6; white-space: nowrap;
+  font: 700 11px var(--body); letter-spacing: 2px; padding: 2px 10px; border: 2px solid var(--ink); border-radius: 20px; color: var(--ink);
+}
+.label.flipped { background: var(--warn); } .label.peeked { background: var(--go); } .label.opened { background: #fff; }
+.crate.tap .cw { cursor: pointer; animation: wiggle 0.9s infinite; filter: drop-shadow(0 0 8px var(--warn)); }
+.crate.tap::before { content: ""; position: absolute; inset: -4px -4px 8px; border: 4px dashed var(--warn); border-radius: 22px; pointer-events: none; z-index: 5; }
+@keyframes wiggle { 50% { transform: rotate(1.5deg) translateY(-2px); } }
+
+/* ---- bidding: flip-board digits ---- */
+.bidpanel { text-align: center; padding: 2px 0; }
+.bignum { display: inline-flex; gap: 5px; justify-content: center; }
+.tile {
+  display: inline-flex; align-items: center; justify-content: center; position: relative; min-width: clamp(34px, 11vw, 56px); height: clamp(58px, 18vw, 92px); padding: 0 4px;
+  background: var(--navy); color: var(--warn); border: 4px solid var(--ink); border-radius: 10px; box-shadow: 0 6px 0 var(--ink);
+  font: 400 clamp(46px, 14vw, 76px)/1 var(--display); letter-spacing: 0;
+}
+.tile::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 3px; background: var(--ink); }
+.tile.sep { min-width: 16px; background: transparent; border-color: transparent; box-shadow: none; color: var(--paper); }
+.tile.sep::after { display: none; }
+.leader { display: inline-block; margin-top: 12px; padding: 3px 14px; background: var(--navy); border: 3px solid var(--ink); border-radius: 20px; font: 700 14px var(--body); letter-spacing: 3px; text-transform: uppercase; color: #fff; box-shadow: 0 3px 0 var(--ink); }
+.callbanner {
+  margin: 8px auto 0; display: inline-block; padding: 4px 22px 2px; background: var(--bad); color: #fff; border: 4px solid var(--ink);
+  border-radius: 12px; box-shadow: 0 5px 0 var(--ink); font: 400 clamp(30px, 9vw, 46px)/1.1 var(--display); letter-spacing: 3px; animation: slam 0.35s;
+}
+.callbanner.c2 { background: #ff8a1f; }
+@keyframes slam { 0% { transform: scale(2) rotate(-6deg); opacity: 0; } 70% { transform: scale(0.94); } 100% { transform: scale(1); opacity: 1; } }
+.bidpanel.slam .tile { animation: slam 0.5s; color: var(--go); }
+
+/* ---- what you own: a paper strip ---- */
+.mine { background: var(--paper); color: var(--ink); border: 4px solid var(--ink); border-radius: 14px; padding: 8px 12px 10px; box-shadow: 0 5px 0 var(--ink); }
+.mhead { display: flex; justify-content: space-between; font: 700 12px var(--body); letter-spacing: 2px; text-transform: uppercase; }
+.mhead b { font: 400 22px var(--display); letter-spacing: 1px; margin-left: 4px; }
+.ilist { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ichip { display: flex; gap: 8px; align-items: center; padding: 3px 10px; border: 2px solid var(--ink); border-radius: 20px; color: #fff; font: 700 12px var(--body); }
+.ichip b { font: 400 15px var(--display); }
+.ichip.junk { background: var(--junk); } .ichip.common { background: var(--common); } .ichip.valuable { background: var(--valuable); }
+.ichip.unique { background: var(--unique); color: var(--ink); } .ichip.havoc { background: var(--havoc); }
+.none { font: 600 13px var(--body); opacity: 0.6; }
+
+/* ---- sticky action bar ---- */
+.actions {
+  position: sticky; bottom: 0; z-index: 30; margin: 0 -12px; padding: 14px 12px calc(12px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 8px; align-items: center; min-height: 56px;
+  background: var(--navy2); border-top: 5px solid var(--ink); box-shadow: 0 -6px 0 var(--mauve);
+}
+.actions:not(:has(.btn, input, p)) { display: none; }
+.abtns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.quick { display: flex; gap: 8px; width: min(100%, 420px); }
+.quick .btn { flex: 1; font-size: 22px; padding: 8px 4px; min-width: 0; }
+.btn.on { background: var(--warn); }
+.btn.risky { background: #ffd0d6; }
+.btn.big { font-size: 28px; padding: 12px 30px; }
+.custom { display: flex; gap: 8px; width: min(100%, 340px); }
+.custom input { flex: 1; min-width: 0; font: 700 18px var(--body); padding: 8px 12px; border: 4px solid var(--ink); border-radius: 12px; background: #fff; color: var(--ink); }
+.hint { margin: 0; font: 700 14px var(--body); text-align: center; opacity: 0.9; }
+.risk { margin: 0; font: 700 14px var(--body); color: #ffb3bd; text-align: center; }
+.youwin { margin: 0; font: 400 32px var(--display); letter-spacing: 2px; color: var(--go); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 14px; transform: translate(-50%, 160%); z-index: 90; max-width: 92vw; text-align: center;
+  background: var(--paper); color: var(--ink); border: 4px solid var(--ink); border-radius: 12px; padding: 8px 16px; box-shadow: 0 5px 0 var(--ink);
+  font: 700 15px var(--body); transition: transform 0.25s;
+}
+.toast.show { transform: translate(-50%, 0); }
+
+@media (min-width: 900px) {
+  .stage { flex-direction: row; align-items: flex-start; justify-content: center; gap: 28px; }
+}
+
+/* ---- payment ---- */
+.paypanel { display: flex; flex-direction: column; align-items: center; gap: 8px; width: min(100%, 440px); }
+.paypanel h3 { margin: 0; font-size: 34px; letter-spacing: 2px; color: var(--warn); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; }
+.paycash { display: flex; flex-direction: column; gap: 4px; width: 100%; font: 700 13px var(--body); letter-spacing: 1px; }
+.paycash input { font: 700 20px var(--body); padding: 8px 12px; border: 4px solid var(--ink); border-radius: 12px; background: #fff; color: var(--ink); width: 100%; }
+.pchips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.pchip { display: flex; gap: 8px; align-items: center; padding: 5px 12px; border: 3px solid var(--ink); border-radius: 20px; color: #fff; font: 700 13px var(--body); opacity: 0.55; box-shadow: 0 3px 0 var(--ink); }
+.pchip b { font: 400 17px var(--display); }
+.pchip.on { opacity: 1; transform: translateY(-2px); outline: 3px solid var(--go); outline-offset: 2px; }
+.pchip.common { background: var(--common); } .pchip.valuable { background: var(--valuable); } .pchip.unique { background: var(--unique); color: var(--ink); } .pchip.junk { background: var(--junk); } .pchip.havoc { background: var(--havoc); }
+.total { margin: 0; font: 700 15px var(--body); }
+.total b { font: 400 26px var(--display); letter-spacing: 1px; }
+.total.ok b { color: var(--go); } .total.short b { color: #ffb3bd; }
+
+/* ---- big stickers: SOLD / FINED / VOID ---- */
+.banner {
+  position: fixed; left: 50%; top: 38%; z-index: 200; pointer-events: none; transform: translate(-50%, -50%) rotate(-6deg);
+  padding: 8px 34px 4px; border: 6px solid var(--ink); border-radius: 18px; box-shadow: 0 10px 0 var(--ink);
+  font: 400 clamp(54px, 16vw, 110px)/1 var(--display); letter-spacing: 4px; color: #fff; white-space: nowrap; animation: stamp 2.3s both;
+}
+.banner.sold { background: var(--go); color: var(--ink); } .banner.fined { background: var(--bad); } .banner.void { background: var(--havoc); color: var(--warn); }
+@keyframes stamp { 0% { transform: translate(-50%, -50%) rotate(-6deg) scale(3); opacity: 0; } 12% { transform: translate(-50%, -50%) rotate(-6deg) scale(0.92); opacity: 1; } 18% { transform: translate(-50%, -50%) rotate(-6deg) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) rotate(-6deg) scale(1.05); } }
+.voidstamp {
+  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) rotate(-9deg); z-index: 8; pointer-events: none;
+  padding: 0 24px; border: 8px solid var(--bad); border-radius: 16px; color: var(--bad); background: rgba(255, 250, 240, 0.9);
+  font: 400 clamp(70px, 22vw, 130px)/1.05 var(--display); letter-spacing: 4px; box-shadow: 0 8px 0 var(--ink);
+}

@@ -1,0 +1,12 @@
+/* Background scenes: the flat daytime storage facility (see client/js/art/scenes.js). */
+.scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #b4d3e0; }
+.sc { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* the title door: rolls up as one piece (title and ENTER are painted on it) */
+.door-g.open { transform: translateY(-384px); }
+.door-g.rolling { transform: translateY(-384px); transition: transform 0.8s cubic-bezier(0.65, 0, 0.3, 1); }
+.enter-g { cursor: pointer; pointer-events: auto; transform-box: fill-box; transform-origin: center; animation: pulse 1.5s ease-in-out infinite; }
+.enter-g:focus-visible { outline: none; }
+.enter-g:focus-visible rect:nth-child(2) { stroke: #fff; stroke-width: 8; }
+@keyframes pulse { 50% { transform: scale(1.07); } }
+.front { pointer-events: auto; }
