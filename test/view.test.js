@@ -78,7 +78,7 @@ test('can-flags follow the phase, the role and the mode', () => {
   s.buyIns = { p2: 'pass' };
   assert.deepEqual([can('p2').buyin, can('p2').pass], [false, false]); // decided already
   s.buyIns = {};
-  assert.equal(can('p0').buyin, false);
+  assert.deepEqual([can('p0').buyin, can('p0').pass], [true, true]); // the Auctioneer buys in or passes too
   assert.equal(can('p0').flip, false);
   assert.equal(can('p3').flip, false);
   assert.equal(can('p0').peek, false); // already peeked
@@ -108,11 +108,11 @@ test('can-flags follow the phase, the role and the mode', () => {
   assert.ok(viewFor(s, 'p1').payment.suggested);
 });
 
-test('buy-in status: pending for undecided buyers, none for the Auctioneer', () => {
+test('buy-in status: pending for every undecided player, the Auctioneer included', () => {
   const s = midRound();
   s.buyIns = { p1: 'in' };
   const st = Object.fromEntries(viewFor(s, 'p2').players.map((p) => [p.id, p.buyIn]));
-  assert.deepEqual(st, { p0: null, p1: 'in', p2: 'pending', p3: 'pending' });
+  assert.deepEqual(st, { p0: 'pending', p1: 'in', p2: 'pending', p3: 'pending' });
 });
 
 test('filterEvents drops other players private events and never leaks items in public reveals', () => {

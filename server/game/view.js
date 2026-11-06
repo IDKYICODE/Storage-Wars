@@ -25,7 +25,7 @@ export function viewFor(state, me) {
   const players = state.order.map((id) => {
     const p = state.players[id];
     let buyIn = state.buyIns[id] ?? null;
-    if (state.phase === 'buyin' && id !== state.auctioneerId && !p.eliminated && buyIn === null) buyIn = 'pending';
+    if (state.phase === 'buyin' && !p.eliminated && buyIn === null) buyIn = 'pending';
     return {
       id, name: p.name, cash: p.cash, itemCount: p.items.length, eliminated: p.eliminated,
       connected: p.connected, isAuctioneer: id === state.auctioneerId, turnsPlayed: p.turnsPlayed,
@@ -38,8 +38,7 @@ export function viewFor(state, me) {
   const anyDown = state.slots.some((s) => !s.faceUp);
   let canPeek = false;
   if (alive && !hasPeeked && anyDown && state.unit) {
-    if (isAuctioneer) canPeek = ['flip', 'buyin', 'peekwin'].includes(state.phase);
-    else canPeek = ['buyin', 'peekwin'].includes(state.phase) && state.unit.peek !== 'never'
+    canPeek = ['buyin', 'peekwin'].includes(state.phase) && state.unit.peek !== 'never'
       && (state.unit.peek === 'before' || state.buyIns[me] === 'in');
   }
   const myTurnToDecide = state.phase === 'buyin' && undecidedBuyers(state).includes(me);

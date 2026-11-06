@@ -10,7 +10,7 @@ STORAGE WARS is a free online version of the storage-unit auction card game *Bid
 
 Everyone starts with the same cash ($5,000 by default). Each round one player is the **Auctioneer** and the others bid on a **storage unit** full of face-down items.
 
-- **Buy in** (by default $100, paid to the Auctioneer) to join the auction, or pass. Everyone decides at the same time.
+- **Buy in** (by default $100, paid to the Auctioneer) to join the auction, or pass. Everyone decides at the same time, the Auctioneer too (their own fee and any price they pay go to the bank).
 - **Peek** at a crate or watch the Auctioneer flip one, depending on how big the unit is. Peeks are private: only you see what you peeked at.
 - **Bid** in steps of $100, up to what you can pay (cash plus the value of your items). When the bidding stops, the Auctioneer calls "going once, going twice, SOLD!".
 - The winner **pays** with cash or items they already won, and opens the unit. Junk costs you money, valuables pay off, and a **Havoc** card wipes out the whole unit, so you paid for nothing.

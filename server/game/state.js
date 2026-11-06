@@ -45,6 +45,7 @@ export function createGame(players, mode, seed, now = 0, config = {}) {
     bid: null,
     call: 0,
     roundAuto: false,
+    bank: 0,
     winner: null,
     excluded: [],
     deadline: null,
@@ -115,11 +116,11 @@ export function beginRoundPhase(state, now) {
   }
 }
 
-/** Seats that may still buy in, in order starting to the Auctioneer's left. */
+/** Seats that may still buy in (the Auctioneer too, last), in order starting to the Auctioneer's left. */
 export function buyInOrder(state) {
   const from = state.order.indexOf(state.auctioneerId);
   const out = [];
-  for (let step = 1; step < state.order.length; step++) {
+  for (let step = 1; step <= state.order.length; step++) {
     const id = state.order[(from + step) % state.order.length];
     if (!state.players[id].eliminated) out.push(id);
   }

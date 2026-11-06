@@ -63,7 +63,7 @@ for (const mode of ['auto', 'manual']) {
         const alive = Object.values(s.players).filter((p) => !p.eliminated);
         if (alive.length > 1) assert.ok(alive.every((p) => p.turnsPlayed === 2), `seed ${seed} n ${n}`);
         assert.ok(Object.values(s.players).every((p) => p.cash >= 0), 'negative cash');
-        assert.equal(value(s), 5000 * n + collected, `value leaked, seed ${seed} n ${n}`);
+        assert.equal(value(s) + s.bank, 5000 * n + collected, `value leaked, seed ${seed} n ${n}`);
         const totals = s.result.scores.map((x) => x.total);
         assert.deepEqual(totals, [...totals].sort((a, b) => b - a));
         assert.ok(s.result.winnerIds.length >= 1);
@@ -81,7 +81,7 @@ test('a long game (10 turns each, 5 players = 50 rounds) runs to the end and sti
   for (const mode of ['auto', 'manual']) {
     const { s, collected } = play(3, 5, mode, { turns: 10 });
     assert.equal(s.phase, 'gameover');
-    assert.equal(value(s), 5000 * 5 + collected);
+    assert.equal(value(s) + s.bank, 5000 * 5 + collected);
     assert.ok(Object.values(s.players).every((p) => p.cash >= 0));
   }
 });

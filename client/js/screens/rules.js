@@ -57,8 +57,8 @@ const PAGES = [
     art: () => `<div class="rb-stack"><div class="abtns">${pill('go', 'Buy in $100')}${pill('', 'Pass')}</div>`
       + `<div class="rb-strip">${still(renderPlayers(view({ players: withBuyIns([null, 'in', 'pass', 'pending']) })))}</div></div>`,
     text: [
-      'Everyone except the Auctioneer decides at the same time: pay the buy-in fee to bid, or pass and watch.',
-      'The fee goes to the Auctioneer (the host picks the amount, $100 by default). Players who do not decide before the clock runs out are passed.',
+      'Everyone decides at the same time: pay the buy-in fee to bid, or pass and watch.',
+      'The fee goes to the Auctioneer (the host picks the amount, $100 by default). The Auctioneer can buy in too, but pays the bank. Players who do not decide before the clock runs out are passed.',
     ],
   },
   {
@@ -66,7 +66,7 @@ const PAGES = [
     art: () => `<div class="rb-stack">${still(renderBidPanel(view({ phase: 'bidding', bid: { amount: 1200, bidderId: 'c' }, call: 1 })))}`
       + `<div class="quick">${pill('', '+$100')}${pill('', '+$500')}${pill('', '+$1,000')}</div></div>`,
     text: [
-      'Anyone who bought in can raise at any time, in steps of $100. The highest bid leads.',
+      'Anyone who bought in, the Auctioneer included, can raise at any time, in steps of $100. The highest bid leads.',
       'You can only bid what you can pay: cash plus the value of your items. The Auctioneer calls going once, going twice, SOLD, and every new bid restarts the count.',
     ],
   },

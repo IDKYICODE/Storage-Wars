@@ -43,12 +43,15 @@ export function validatePayment(player, price, pay) {
 
 function transfer(state, fromId, pay) {
   const from = state.players[fromId];
-  const to = state.players[state.auctioneerId];
+  const to = fromId === state.auctioneerId ? null : state.players[state.auctioneerId]; // an Auctioneer who pays pays the bank
   from.cash -= pay.cash;
-  to.cash += pay.cash;
+  if (to) to.cash += pay.cash;
+  else state.bank += pay.cash;
   for (const id of pay.itemIds) {
     const idx = from.items.findIndex((x) => x.id === id);
-    to.items.push(...from.items.splice(idx, 1));
+    const [item] = from.items.splice(idx, 1);
+    if (to) to.items.push(item);
+    else state.bank += item.value;
   }
 }
 

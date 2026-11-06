@@ -60,14 +60,16 @@ test('auto mode flips by itself and humans cannot flip; manual idle hands the ro
   assert.equal(out.state.slots.filter((x) => x.faceUp).length, 1);
 });
 
-test('the Auctioneer peeks privately, once', () => {
-  const s = setup({ unit: 'locker' });
+test('a peek is private and allowed once; the Auctioneer follows the same peek rules as everyone', () => {
+  const s = setup({ unit: 'medium' });
   const { state, events } = act(s, 'peek', 'p0', { index: 0 });
   const priv = events.find((e) => e.type === 'peeked');
   assert.equal(priv.to, 'p0');
   assert.equal(priv.item.id, 't-0');
   assert.ok(events.some((e) => e.type === 'peek-used' && e.by === 'p0' && !('item' in e)));
   assert.equal(code(() => act(state, 'peek', 'p0', { index: 0 })), 'invalid');
+  assert.equal(code(() => act(setup({ unit: 'locker' }), 'peek', 'p0', { index: 0 })), 'not-allowed'); // no peeks on a locker, for anyone
+  assert.equal(code(() => act(setup({ unit: 'small' }), 'peek', 'p0', { index: 0 })), 'not-allowed'); // buy in first
 });
 
 test('player peek rules follow the unit: never / before / after buy-in', () => {
@@ -101,13 +103,24 @@ test('buy-in is simultaneous: every player can decide at once, in any order', ()
   assert.equal(s.phase, 'buyin');
   assert.deepEqual(s.buyIns, { p3: 'in', p2: 'in' });
   s = act(s, 'buyin', 'p1').state;
+  assert.equal(s.phase, 'buyin'); // the Auctioneer decides too
+  s = act(s, 'pass', 'p0').state;
   assert.equal(s.phase, 'bidding'); // all decided: bidding opens at once
   assert.equal(s.players.p0.cash, 5300); // three buy-ins of $100 to the Auctioneer
 });
 
-test('buy-in: cash only, the configured fee, the Auctioneer cannot, no double clicks', () => {
+test('the Auctioneer can buy in and bid like everyone else; their own fee goes to the bank, not to themselves', () => {
+  let s = setup({ unit: 'locker' });
+  s = act(s, 'buyin', 'p0').state;
+  assert.equal(s.players.p0.cash, 4900);
+  assert.equal(s.bank, 100);
+  for (const id of ['p1', 'p2', 'p3']) s = act(s, 'pass', id).state;
+  assert.equal(s.phase, 'bidding');
+  assert.equal(act(s, 'bid', 'p0', { amount: 100 }).state.bid.bidderId, 'p0');
+});
+
+test('buy-in: cash only, the configured fee, no double clicks', () => {
   const s = setup({ unit: 'locker' });
-  assert.equal(code(() => act(s, 'buyin', 'p0')), 'not-allowed');
   const { state } = act(s, 'buyin', 'p1');
   assert.equal(state.players.p1.cash, 4900);
   assert.equal(state.players.p0.cash, 5100);
@@ -132,16 +145,17 @@ test('the shared buy-in clock passes for everyone who has not decided', () => {
   s = act(s, 'buyin', 'p2').state;
   assert.deepEqual(s.deadline, { kind: 'buyin', at: 25000 }); // deciding does not restart the clock
   const out = tick(s, 25000);
+  assert.equal(out.state.buyIns.p0, 'pass');
   assert.equal(out.state.buyIns.p1, 'pass');
   assert.equal(out.state.buyIns.p3, 'pass');
   assert.equal(out.state.buyIns.p2, 'in');
   assert.equal(out.state.phase, 'bidding');
-  assert.equal(out.events.filter((e) => e.type === 'pass' && e.auto).length, 2);
+  assert.equal(out.events.filter((e) => e.type === 'pass' && e.auto).length, 3);
 });
 
 test('everyone passes: unit discarded, round over, no money moves', () => {
   let s = setup({ unit: 'locker' });
-  for (const id of ['p1', 'p2', 'p3']) s = act(s, 'pass', id).state;
+  for (const id of ['p0', 'p1', 'p2', 'p3']) s = act(s, 'pass', id).state;
   assert.equal(s.players.p0.turnsPlayed, 1);
   assert.equal(s.auctioneerId, 'p1');
   assert.equal(s.roundNo, 2);
@@ -152,6 +166,7 @@ test('after the last buy-in the peek window opens; ready from all buyers ends it
   let s = setup({ unit: 'small' });
   s = act(s, 'buyin', 'p1').state;
   s = act(s, 'pass', 'p2').state;
+  s = act(s, 'pass', 'p0').state;
   s = act(s, 'buyin', 'p3').state;
   assert.equal(s.phase, 'peekwin');
   assert.deepEqual(s.deadline, { kind: 'peekwin', at: 15000 });
@@ -167,11 +182,13 @@ test('peek window timeout opens bidding; a no-peek unit goes straight to bidding
   s = act(s, 'buyin', 'p1').state;
   s = act(s, 'pass', 'p2').state;
   s = act(s, 'pass', 'p3').state;
+  s = act(s, 'pass', 'p0').state;
   assert.equal(tick(s, 15000).state.phase, 'bidding');
 
   let l = setup({ unit: 'locker' });
   l = act(l, 'buyin', 'p1').state;
   l = act(l, 'pass', 'p2').state;
   l = act(l, 'pass', 'p3').state;
+  l = act(l, 'pass', 'p0').state;
   assert.equal(l.phase, 'bidding');
 });

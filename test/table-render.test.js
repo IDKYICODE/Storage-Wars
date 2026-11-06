@@ -21,14 +21,12 @@ function setup({ unit = 'jumbo', mode = 'manual', phase } = {}) {
 }
 const html = (s, id, ui) => renderTable(viewFor(s, id), ui);
 
-test('buy-in: every player except the Auctioneer is offered Buy in and Pass at the same time', () => {
+test('buy-in: every player, the Auctioneer included, is offered Buy in and Pass at the same time', () => {
   const s = setup({ unit: 'locker' }); // locker: no flip, goes straight to buy-in
-  for (const bidder of ['p1', 'p2', 'p3']) {
+  for (const bidder of ['p0', 'p1', 'p2', 'p3']) {
     assert.ok(html(s, bidder).includes('Buy in $100'), bidder);
     assert.ok(html(s, bidder).includes('>Pass<'), bidder);
   }
-  assert.ok(!html(s, 'p0').includes('Buy in $100'));
-  assert.ok(!html(s, 'p0').includes('>Pass<'));
 });
 
 test('once you have decided you are not offered the buttons again', () => {
@@ -145,7 +143,7 @@ test('eliminated players are marked in the strip', () => {
   assert.ok(/class="chip[^"]*out/.test(html(s, 'p1')));
 });
 
-test('the Auctioneer is told why they cannot buy in or bid', () => {
+test('the Auctioneer is told how their seat differs: they collect fees, can bid, and pay the bank', () => {
   const s = setup({ unit: 'locker' });
   const note = 'You are the Auctioneer';
   assert.ok(html(s, 'p0').includes(note));
@@ -153,5 +151,6 @@ test('the Auctioneer is told why they cannot buy in or bid', () => {
   s.phase = 'bidding';
   s.buyIns = { p1: 'in', p2: 'in' };
   assert.ok(html(s, 'p0').includes(note));
-  assert.ok(html(s, 'p0').includes('collect the buy-ins'));
+  assert.ok(html(s, 'p0').includes('can bid too'));
+  assert.ok(html(s, 'p0').includes('go to the bank'));
 });

@@ -55,13 +55,9 @@ registerHandler('flip', (state, action, now, events) => {
 
 registerHandler('peek', (state, action, now, events) => {
   const by = action.by;
-  if (by === state.auctioneerId) {
-    need(['flip', 'buyin', 'peekwin'].includes(state.phase), 'wrong-phase');
-  } else {
-    need(['buyin', 'peekwin'].includes(state.phase), 'wrong-phase');
-    need(state.unit.peek !== 'never', 'not-allowed', 'this unit cannot be peeked');
-    need(state.unit.peek === 'before' || state.buyIns[by] === 'in', 'not-allowed', 'buy in first');
-  }
+  need(['buyin', 'peekwin'].includes(state.phase), 'wrong-phase');
+  need(state.unit.peek !== 'never', 'not-allowed', 'this unit cannot be peeked');
+  need(state.unit.peek === 'before' || state.buyIns[by] === 'in', 'not-allowed', 'buy in first');
   need((state.peeks[by] || []).length === 0, 'invalid', 'already peeked');
   need(validIndex(state, action.index), 'invalid', 'bad crate');
   state.peeks[by] = [action.index];
@@ -84,7 +80,8 @@ function decide(state, by, choice, now, events, auto = false) {
     const fee = state.config.buyIn;
     need(state.players[by].cash >= fee, 'invalid', 'not enough cash');
     state.players[by].cash -= fee;
-    state.players[state.auctioneerId].cash += fee;
+    if (by !== state.auctioneerId) state.players[state.auctioneerId].cash += fee;
+    else state.bank += fee; // the Auctioneer's own fee goes to the bank
     state.buyIns[by] = 'in';
     events.push({ type: 'buyin', by });
   } else {

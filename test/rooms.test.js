@@ -197,10 +197,12 @@ test('act ignores any claimed actor and turns illegal actions into an error resu
   g.auctioneerId = a.player.id;
   g.buyIns = {};
   g.deadline = { kind: 'buyin', at: clock + 25_000 };
-  // Ayush pretends to be Bea
+  // Ayush pretends to be Bea: the action is applied to Ayush himself, never to Bea
   const spoof = rooms.act(a.token, { type: 'pass', by: decider });
-  assert.equal(spoof.error.code, 'not-allowed');
+  assert.equal(spoof.changed, true);
+  assert.equal(room.game.buyIns[a.player.id], 'pass');
   assert.equal(room.game.buyIns[decider], undefined);
+  assert.equal(rooms.act(a.token, { type: 'pass', by: decider }).error.code, 'not-allowed'); // already decided
   const real = rooms.act(b.token, { type: 'pass', by: 'whoever' });
   assert.equal(real.changed, true);
   assert.equal(room.game.buyIns[decider], 'pass');

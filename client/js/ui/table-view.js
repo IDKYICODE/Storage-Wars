@@ -134,9 +134,9 @@ function renderBidControls(view, ui) {
       + `${tooMuch ? `<p class="risk">That is more than you can pay. The most you can bid is ${formatMoney(assets)}.</p>` : ''}`);
   } else if (view.bid?.bidderId === view.you) {
     parts.push("<p class=\"youwin\">You're winning</p>");
-  } else if (view.you !== view.auctioneerId && view.players.find((p) => p.id === view.you)?.buyIn === 'in') {
+  } else if (view.players.find((p) => p.id === view.you)?.buyIn === 'in') {
     parts.push(`<p class="hint">You cannot afford to outbid ${formatMoney(high)}. You can bid up to ${formatMoney(assets)}.</p>`);
-  } else if (view.you !== view.auctioneerId) {
+  } else {
     parts.push('<p class="hint">You are watching this auction.</p>');
   }
   if (can.call) {
@@ -162,7 +162,7 @@ export function renderActions(view, ui = {}) {
   }
   if (can.ready) parts.push('<button class="btn go" data-act="ready">Ready</button>');
   const auctNote = view.you === view.auctioneerId && ['buyin', 'peekwin', 'bidding'].includes(view.phase)
-    ? '<p class="hint auctnote">You are the Auctioneer this round: you collect the buy-ins and cannot bid.</p>' : '';
+    ? '<p class="hint auctnote">You are the Auctioneer: you collect the buy-ins and can bid too. Your own buy-in and price go to the bank.</p>' : '';
   const hint = ui.pick ? `<p class="hint">Tap a crate to ${ui.pick}.</p>` : '';
   return `<div class="actions">${auctNote}${hint}<div class="abtns">${parts.join('')}</div></div>`;
 }
