@@ -7,30 +7,31 @@ const MODES = {
   auto: { label: 'AUTO', text: "The computer runs each auction for whoever's turn it is. They still collect the money." },
 };
 
-const STEPS = { startCash: [1000, 20000, 1000], buyIn: [100, 1000, 100] };
+const STEPS = { turns: [1, 99, 1], startCash: [1000, 20000, 1000], buyIn: [100, 1000, 100] };
+const QUICK_TURNS = [1, 2, 3, 5, 10];
 
-/** The game-rules panel: rounds each as buttons, starting cash and buy-in as - / + steppers. Read-only for non-hosts. */
+/** The game-rules panel: turns each (quick picks plus a stepper), starting cash and buy-in fee. Read-only for non-hosts. */
 function renderSettings(lobby, isHost) {
-  const { turns, startCash, buyIn } = lobby.settings;
-  const cap = lobby.maxTurns;
+  const { turns } = lobby.settings;
   const n = lobby.players.length;
-  const rounds = Array.from({ length: cap }, (_, i) => i + 1).map((t) => (isHost
+  const quick = QUICK_TURNS.map((t) => (isHost
     ? `<button class="seg${turns === t ? ' on' : ''}" data-act="set" data-key="turns" data-value="${t}" aria-pressed="${turns === t}">${t}</button>`
     : `<span class="seg${turns === t ? ' on' : ''}">${t}</span>`)).join('');
-  const stepper = (key, label) => {
+  const stepper = (key, label, show) => {
     const [min, max, step] = STEPS[key];
     const value = lobby.settings[key];
     const btn = (to, sign, off) => `<button class="step" data-act="set" data-key="${key}" data-value="${to}" aria-label="${sign === '-' ? 'Less' : 'More'} ${label}"${off ? ' disabled' : ''}>${sign}</button>`;
     return `<div class="setrow"><span class="setlabel">${label}</span>`
       + (isHost ? btn(value - step, '-', value <= min) : '')
-      + `<b class="setval">${formatMoney(value)}</b>`
+      + `<b class="setval">${show(value)}</b>`
       + (isHost ? btn(value + step, '+', value >= max) : '')
       + '</div>';
   };
   return `<div class="section"><h2 class="display">GAME RULES</h2>`
-    + `<div class="setrow"><span class="setlabel">Turns each</span><div class="segs">${rounds}</div></div>`
-    + `<p class="modetext">${turns * n} rounds in total</p>`
-    + `${stepper('startCash', 'Starting cash')}${stepper('buyIn', 'Buy-in fee')}</div>`;
+    + `${isHost ? `<div class="segs quick">${quick}</div>` : ''}`
+    + `${stepper('turns', 'Turns each', String)}`
+    + `<p class="modetext">${n < 3 ? `Each player runs ${turns} ${turns === 1 ? 'auction' : 'auctions'}` : `${turns * n} rounds in total`}</p>`
+    + `${stepper('startCash', 'Starting cash', formatMoney)}${stepper('buyIn', 'Buy-in fee', formatMoney)}</div>`;
 }
 
 /** Pure markup for the room lobby. `lobby` is the server's lobby message ({code, hostId, mode, players, you}). */

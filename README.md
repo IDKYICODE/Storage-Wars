@@ -16,7 +16,7 @@ Everyone starts with the same cash ($5,000 by default). Each round one player is
 - The winner **pays** with cash or items they already won, and opens the unit. Junk costs you money, valuables pay off, and a **Havoc** card wipes out the whole unit, so you paid for nothing.
 - Everyone is Auctioneer the same number of times. The richest player (cash plus item values) wins.
 
-The host sets the game up in the lobby: **Manual** or **Auto** Auctioneer, turns each (1 to 4, at most 14 rounds in total), starting cash ($1,000 to $20,000) and the buy-in fee ($100 to $1,000). A **How to play** booklet with pictures of the real cards and controls is on the entry screen.
+The host sets the game up in the lobby: **Manual** or **Auto** Auctioneer, turns each (1 to 99, the decks reshuffle when they run out), starting cash ($1,000 to $20,000) and the buy-in fee ($100 to $1,000). A **How to play** booklet with pictures of the real cards and controls is on the entry screen.
 
 Manual means a real player runs each auction; Auto means the server runs it.
 

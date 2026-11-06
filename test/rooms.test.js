@@ -128,9 +128,8 @@ test('settings: host only, lobby only, validated, and they reach the game', () =
   const b = rooms.join(a.room.code, 'Bea');
   rooms.join(a.room.code, 'Cal');
   assert.deepEqual(rooms.snapshot(a.room, a.player.id).lobby.settings, { turns: 2, startCash: 5000, buyIn: 100 });
-  assert.equal(rooms.snapshot(a.room, a.player.id).lobby.maxTurns, 4);
   assert.equal(code(() => rooms.setSettings(b.token, { turns: 1 })), 'not-host');
-  for (const bad of [{ turns: 0 }, { turns: 5 }, { turns: 1.5 }, { startCash: 500 }, { startCash: 25000 }, { startCash: 1500 },
+  for (const bad of [{ turns: 0 }, { turns: 100 }, { turns: 1.5 }, { startCash: 500 }, { startCash: 25000 }, { startCash: 1500 },
     { buyIn: 0 }, { buyIn: 1100 }, { buyIn: 150 }, { nope: 1 }, { turns: '2' }, null]) {
     assert.equal(code(() => rooms.setSettings(a.token, bad)), 'bad-setting', JSON.stringify(bad));
   }
@@ -142,16 +141,15 @@ test('settings: host only, lobby only, validated, and they reach the game', () =
   assert.equal(code(() => rooms.setSettings(a.token, { turns: 1 })), 'started');
 });
 
-test('rounds each are capped by the player count at start, even if set while the room was smaller', () => {
+test('rounds each: any number from 1 to 99, no matter how many players', () => {
   const rooms = mk();
   const a = rooms.create('Ayush');
-  rooms.join(a.room.code, 'Bea');
-  rooms.join(a.room.code, 'Cal');
-  rooms.setSettings(a.token, { turns: 4 });
-  for (const n of ['D', 'E', 'F', 'G']) rooms.join(a.room.code, `Dee${n}`); // 7 players: 14 / 7 = 2 each
-  assert.equal(rooms.snapshot(a.room, a.player.id).lobby.maxTurns, 2);
+  for (const n of ['Bea', 'Cal', 'Dee', 'Eve', 'Fay', 'Gus']) rooms.join(a.room.code, n);
+  rooms.setSettings(a.token, { turns: 25 });
   rooms.start(a.token);
-  assert.equal(a.room.game.config.turns, 2);
+  assert.equal(a.room.game.config.turns, 25);
+  const solo = mk();
+  assert.equal(code(() => solo.setSettings(solo.create('X').token, { turns: 99 })), null);
 });
 
 test('leaving the lobby frees the seat and passes the host crown; an empty room is deleted', () => {

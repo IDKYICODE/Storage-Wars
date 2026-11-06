@@ -7,7 +7,6 @@ const mk = (n, extra = {}) => ({
   hostId: 'p0',
   mode: 'manual',
   settings: { turns: 2, startCash: 5000, buyIn: 100 },
-  maxTurns: Math.max(1, Math.min(4, Math.floor(14 / n))),
   you: 'p0',
   players: Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `Player${i}`, connected: true })),
   ...extra,
@@ -72,17 +71,19 @@ test('you are marked as "you" in the list, and everyone gets a Leave button', ()
 
 const setBtn = (html, key, value) => html.match(new RegExp(`<button[^>]*data-key="${key}"[^>]*data-value="${value}"[^>]*>`))?.[0] ?? null;
 
-test('the host sees rounds each as buttons up to the player-count cap, with the total rounds spelled out', () => {
+test('rounds each has quick picks and a stepper with no upper cap beyond 99, and the total is spelled out', () => {
   const html = renderLobby(mk(4));
-  for (const t of [1, 2, 3]) assert.ok(setBtn(html, 'turns', t), `turns ${t}`);
-  assert.equal(setBtn(html, 'turns', 4), null); // 4 players x 4 turns would be 16 rounds, over the 14 cap
-  assert.ok(renderLobby(mk(3)).includes('data-value="4"'));
+  for (const t of [1, 2, 3, 5, 10]) assert.ok(setBtn(html, 'turns', t), `quick pick ${t}`);
   assert.match(setBtn(html, 'turns', 2), /class="seg on"/);
+  assert.ok(setBtn(html, 'turns', 1) && setBtn(html, 'turns', 3)); // stepper - / +
   assert.ok(html.includes('8 rounds in total'));
-  const seven = renderLobby(mk(7));
-  assert.ok(setBtn(seven, 'turns', 2));
-  assert.equal(setBtn(seven, 'turns', 3), null);
-  assert.ok(seven.includes('14 rounds in total'));
+  const many = renderLobby(mk(7, { settings: { turns: 20, startCash: 5000, buyIn: 100 } }));
+  assert.ok(many.includes('140 rounds in total'));
+  assert.ok(setBtn(many, 'turns', 21) && setBtn(many, 'turns', 19));
+  const top = renderLobby(mk(3, { settings: { turns: 99, startCash: 5000, buyIn: 100 } }));
+  assert.match(setBtn(top, 'turns', 100), /disabled/);
+  const bottom = renderLobby(mk(3, { settings: { turns: 1, startCash: 5000, buyIn: 100 } }));
+  assert.match(setBtn(bottom, 'turns', 0), /disabled/);
 });
 
 test('starting cash and buy-in are steppers that stop at their limits', () => {

@@ -49,13 +49,13 @@ function titleSize(name) {
 /** The face of an item card (230x330 design size). */
 export function renderItemCard(item) {
   const T = TIER[item.tier];
-  const idx = ITEMS.findIndex((i) => i.id === item.id);
+  const idx = ITEMS.findIndex((i) => i.id === (item.base ?? item.id));
   const num = String(idx + 1).padStart(2, '0');
   const pips = '◆'.repeat(T.pips) + '◇'.repeat(5 - T.pips);
   const tag = item.tier === 'havoc' ? HAVOC_BANNER : priceTag(item.value);
   return `<div class="card ${item.tier}" style="--c:${T.c};--t:${T.t}">`
     + `<div class="hd"><div class="tt"><h5 style="font-size:${titleSize(item.name)}px">${esc(item.name.toUpperCase())}</h5><span>${T.label}</span></div><div class="med">${getIcon(item.tier)}</div></div>`
-    + `<div class="win"><svg viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">${getArt(item.id)}</svg>${tag}</div>`
+    + `<div class="win"><svg viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice">${getArt(item.base ?? item.id)}</svg>${tag}</div>`
     + `<p class="fv">${esc(item.flavor)}</p>`
     + `<div class="ft"><span>${num}/56</span><span class="pp">${pips}</span><span>BIDDER BATTLE</span></div></div>`;
 }

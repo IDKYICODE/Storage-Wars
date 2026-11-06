@@ -8,9 +8,9 @@ const value = (s) => Object.values(s.players).reduce(
   (n, p) => n + p.cash + p.items.reduce((m, it) => m + it.value, 0), 0);
 
 /** Scripted players with a little randomness; returns the finished state and what the units were worth. */
-function play(seed, n, mode) {
+function play(seed, n, mode, config = {}) {
   const ids = Array.from({ length: n }, (_, i) => `p${i}`);
-  let s = createGame(ids.map((id) => ({ id, name: id })), mode, seed);
+  let s = createGame(ids.map((id) => ({ id, name: id })), mode, seed, 0, config);
   const r = { seed: seed * 13 + 5 };
   const rnd = () => { r.seed = (r.seed * 1664525 + 1013904223) >>> 0; return r.seed / 4294967296; };
   let now = 0;
@@ -76,3 +76,12 @@ for (const mode of ['auto', 'manual']) {
     }
   });
 }
+
+test('a long game (10 turns each, 5 players = 50 rounds) runs to the end and still conserves money', () => {
+  for (const mode of ['auto', 'manual']) {
+    const { s, collected } = play(3, 5, mode, { turns: 10 });
+    assert.equal(s.phase, 'gameover');
+    assert.equal(value(s), 5000 * 5 + collected);
+    assert.ok(Object.values(s.players).every((p) => p.cash >= 0));
+  }
+});

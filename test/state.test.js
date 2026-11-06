@@ -89,3 +89,20 @@ test('a 7-player game never runs out of cards even with the largest units every 
   assert.equal(rounds, 14);
   assert.ok(s.itemDeck.length >= 0);
 });
+
+test('the decks refill when they run dry, so a game can last any number of rounds with unique card ids', () => {
+  const s = createGame(mk(3), 'manual', 7);
+  const seen = [];
+  for (let i = 0; i < 120; i++) {
+    startRound(s, 0);
+    assert.equal(s.slots.length, s.unit.items);
+    const held = s.slots.map((sl) => sl.item.id);
+    assert.equal(new Set(held).size, held.length, `round ${i}: duplicate id on the table`);
+    // pretend the winner keeps everything; held items must stay unique across the whole game
+    s.players.p0.items.push(...s.slots.map((sl) => sl.item));
+    seen.push(...held);
+  }
+  assert.equal(new Set(seen).size, seen.length, 'an item id was handed out twice');
+  assert.ok(s.players.p0.items.some((it) => it.base), 'copies point back to their original card art');
+  assert.ok(s.players.p0.items.every((it) => it.base === undefined || !it.base.includes('~')));
+});

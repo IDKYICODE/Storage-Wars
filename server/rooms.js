@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { ROOM_CODE_ALPHABET } from '../shared/cards.js';
 import { ActionError, createGame, reduce, tick, setPresence } from './game/engine.js';
-import { DEFAULT_CONFIG, maxTurns, settingProblem } from './game/state.js';
+import { DEFAULT_CONFIG, settingProblem } from './game/state.js';
 import { viewFor, filterEvents } from './game/view.js';
 
 export class RoomError extends Error {
@@ -243,7 +243,6 @@ export class Rooms {
         hostId: room.hostId,
         mode: room.mode,
         settings: { ...room.settings },
-        maxTurns: maxTurns(room.players.length),
         players: room.players.map((p) => ({ id: p.id, name: p.name, connected: p.connected })),
         you: playerId,
       },

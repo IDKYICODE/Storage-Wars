@@ -3,29 +3,26 @@ import { rand, shuffle } from './rng.js';
 
 export const DEFAULT_CONFIG = { startCash: 5000, turns: 2, buyIn: 100 };
 
-/** 16 storage units and 56 items always cover this many rounds (the largest 14 units hold 45 items). */
-export const MAX_TOTAL_ROUNDS = 14;
-/** How many turns each player can be Auctioneer for this many players. */
-export const maxTurns = (players) => Math.max(1, Math.min(4, Math.floor(MAX_TOTAL_ROUNDS / players)));
+export const MAX_TURNS = 99;
 
 const isStep = (v, lo, hi, step) => Number.isInteger(v) && v >= lo && v <= hi && v % step === 0;
 /** True if `patch` only holds legal values (used when the host edits settings in the lobby). */
 export function settingProblem(key, value) {
   if (key === 'startCash') return isStep(value, 1000, 20000, 1000) ? null : 'startCash must be a whole thousand from $1,000 to $20,000';
   if (key === 'buyIn') return isStep(value, 100, 1000, 100) ? null : 'buyIn must be a multiple of $100 up to $1,000';
-  if (key === 'turns') return isStep(value, 1, 4, 1) ? null : 'turns must be 1 to 4';
+  if (key === 'turns') return isStep(value, 1, MAX_TURNS, 1) ? null : `turns must be 1 to ${MAX_TURNS}`;
   return `unknown setting ${key}`;
 }
 
-/** Fills defaults and clamps what depends on the player count. Never throws. */
-export function normalizeConfig(cfg = {}, players = 3) {
+/** Fills defaults for anything missing or illegal. Never throws. */
+export function normalizeConfig(cfg = {}) {
   const pick = (key) => (cfg[key] !== undefined && !settingProblem(key, cfg[key]) ? cfg[key] : DEFAULT_CONFIG[key]);
-  return { startCash: pick('startCash'), buyIn: pick('buyIn'), turns: Math.min(pick('turns'), maxTurns(players)) };
+  return { startCash: pick('startCash'), buyIn: pick('buyIn'), turns: pick('turns') };
 }
 
 /** players: [{id, name}] in seat order. Returns a state already in its first round. */
 export function createGame(players, mode, seed, now = 0, config = {}) {
-  const cfg = normalizeConfig(config, players.length);
+  const cfg = normalizeConfig(config);
   const state = {
     seed: seed >>> 0,
     mode,
@@ -61,12 +58,28 @@ export function createGame(players, mode, seed, now = 0, config = {}) {
   return state;
 }
 
+/**
+ * Long games outlast the 56 cards: when the item deck cannot cover a unit, a fresh shuffled set is added underneath
+ * what is left. A card already in someone's hand or in the deck comes back as a copy with a new id (`base` keeps its art),
+ * so ids stay unique and payment by id keeps working.
+ */
+function refillItems(state, needed) {
+  if (state.itemDeck.length >= needed) return;
+  const taken = new Set([...state.itemDeck, ...Object.values(state.players).flatMap((p) => p.items)].map((it) => it.id));
+  const fresh = ITEMS.map((it) => {
+    if (!taken.has(it.id)) return it;
+    state.copyNo = (state.copyNo ?? 0) + 1;
+    return { ...it, id: `${it.id}~${state.copyNo}`, base: it.id };
+  });
+  state.itemDeck = [...shuffle(fresh, state), ...state.itemDeck];
+}
+
 /** Draws the unit and its items for state.auctioneerId and resets all per-round fields. */
 export function startRound(state, now) {
+  if (!state.unitDeck.length) state.unitDeck = shuffle(UNIT_IDS.flatMap((id) => Array(UNITS[id].count).fill(id)), state);
   const unitId = state.unitDeck.pop();
-  if (!unitId) throw new Error('storage unit deck exhausted');
   const { count, ...unit } = UNITS[unitId];
-  if (state.itemDeck.length < unit.items) throw new Error('item deck exhausted');
+  refillItems(state, unit.items);
   state.unit = unit;
   state.slots = Array.from({ length: unit.items }, () => ({ item: state.itemDeck.pop(), faceUp: false }));
   state.peeks = {};
