@@ -49,11 +49,12 @@ test('calls and bids map to sounds; unknown events do nothing', () => {
   assert.deepEqual(all([{ type: 'mystery' }, { type: 'pass', by: 'p0' }]), []);
 });
 
-test('every sale is announced by a bold SOLD voice', () => {
+test('every sale is announced by a bold, high pitched SOLD voice', () => {
   const sold = all([{ type: 'sold', playerId: 'p2', price: 1200 }]);
   const spoken = find(sold, 'speak').speak;
+  assert.equal(spoken.clip, 'sold');
   assert.match(spoken.text, /^sold!?$/i);
-  assert.ok(spoken.pitch <= 0.5 && spoken.rate <= 1 && spoken.volume === 1, 'deep, slow and loud');
+  assert.ok(spoken.pitch >= 1.2 && spoken.volume === 1, 'the speech fallback is high pitched and loud');
 });
 
 test('when Sahil wins a sale the banner and the voice say SOLD TO FAT FAH', () => {
@@ -62,6 +63,7 @@ test('when Sahil wins a sale the banner and the voice say SOLD TO FAT FAH', () =
     assert.equal(find(list, 'banner').banner.text, 'SOLD TO FAT FAH', name);
     assert.equal(find(list, 'banner').banner.kind, 'sold');
     assert.match(find(list, 'speak').speak.text, /sold to fat fah/i, name);
+    assert.equal(find(list, 'speak').speak.clip, 'sold-fat-fah', name);
     assert.ok(list.some((f) => f.slam));
   }
 });
@@ -71,5 +73,6 @@ test('only the name Sahil gets the special SOLD; other names keep the normal one
     const list = feedbackFor([{ type: 'sold', playerId: 'p9', price: 800 }], { you: 'p1', nameOf: () => name });
     assert.equal(find(list, 'banner').banner.text, 'SOLD!', name);
     assert.doesNotMatch(find(list, 'speak').speak.text, /fat fah/i, name);
+    assert.equal(find(list, 'speak').speak.clip, 'sold', name);
   }
 });

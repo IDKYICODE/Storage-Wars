@@ -1,13 +1,14 @@
 // Turns game events into the sounds, stamps and messages players see and hear. Pure, so it is tested in Node;
 // the table screen performs what this returns.
 
-const BOLD = { pitch: 0.2, rate: 0.8, volume: 1 };
+// the speech settings are only the fallback for when the recorded clip cannot play: bold, high pitched, loud
+const BOLD = { pitch: 1.4, rate: 0.9, volume: 1 };
 const isSahil = (name) => String(name).trim().toLowerCase() === 'sahil';
 
 /**
  * @param {object[]} events  the player's own filtered events from one state push
  * @param {{ you: string, nameOf: (id: string) => string }} ctx
- * @returns {{ speak?: {text: string, pitch: number, rate: number, volume: number}, sound?: string, banner?: {text: string, kind: string}, toast?: string, shake?: boolean, flash?: string, slam?: boolean }[]}
+ * @returns {{ speak?: {clip: string, text: string, pitch: number, rate: number, volume: number}, sound?: string, banner?: {text: string, kind: string}, toast?: string, shake?: boolean, flash?: string, slam?: boolean }[]}
  */
 export function feedbackFor(events, { you, nameOf }) {
   const out = [];
@@ -18,9 +19,9 @@ export function feedbackFor(events, { you, nameOf }) {
       case 'call': out.push({ sound: e.n === 1 ? 'gavel1' : 'gavel2' }); break;
       case 'sold':
         if (isSahil(nameOf(e.playerId))) {
-          out.push({ sound: 'sold', slam: true, banner: { text: 'SOLD TO FAT FAH', kind: 'sold' }, speak: { text: 'Sold to fat fah!', ...BOLD } });
+          out.push({ sound: 'sold', slam: true, banner: { text: 'SOLD TO FAT FAH', kind: 'sold' }, speak: { clip: 'sold-fat-fah', text: 'Sold to fat fah!', ...BOLD } });
         } else {
-          out.push({ sound: 'sold', slam: true, banner: { text: 'SOLD!', kind: 'sold' }, speak: { text: 'Sold!', ...BOLD } });
+          out.push({ sound: 'sold', slam: true, banner: { text: 'SOLD!', kind: 'sold' }, speak: { clip: 'sold', text: 'Sold!', ...BOLD } });
         }
         out.push({ toast: `${nameOf(e.playerId)} wins it for $${e.price.toLocaleString('en-US')}` });
         break;

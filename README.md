@@ -33,7 +33,7 @@ The host sets the game up in the lobby: the number of rounds (1 to 99; the decks
 - Realtime play over WebSockets, with a 4-letter room code and an invite link
 - Hidden information is enforced on the server: your browser never receives a card you are not allowed to see
 - An automatic Auctioneer, timers for every waiting phase, and rejoin after a dropped connection
-- Works on phones and laptops, with synthesized sound effects and a mute switch
+- Works on phones and laptops, with synthesized sound effects, a voice announcer for every sale and a mute switch
 - No accounts, no database: rooms live in memory
 
 ## Run it locally

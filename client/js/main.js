@@ -19,7 +19,7 @@ const overlay = document.getElementById('overlay');
 // tabs, which silently turned extra tabs into the same player (shared bids, shared private peeks).
 const net = createNet(window.io(), window.sessionStorage);
 const sounds = createSounds(window.AudioContext || window.webkitAudioContext, window.localStorage);
-const voice = createVoice(window.speechSynthesis, window.SpeechSynthesisUtterance, () => sounds.isMuted());
+const voice = createVoice({ synth: window.speechSynthesis, Utterance: window.SpeechSynthesisUtterance, Audio: window.Audio, isMuted: () => sounds.isMuted() });
 const ctx = { net, sounds, fx, voice, notice: null, route };
 
 // Sound toggle (always visible) and a click sound on every button.
